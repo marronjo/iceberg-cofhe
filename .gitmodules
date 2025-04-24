@@ -13,3 +13,6 @@
 [submodule "lib/cofhe-contracts"]
 	path = lib/cofhe-contracts
 	url = https://github.com/fhenixprotocol/cofhe-contracts
+[submodule "lib/cofhe-foundry-mocks"]
+	path = lib/cofhe-foundry-mocks
+	url = https://github.com/fhenixprotocol/cofhe-foundry-mocks
