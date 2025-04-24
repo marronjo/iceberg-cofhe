@@ -17,8 +17,11 @@ import {FHE, euint128} from "@fhenixprotocol/cofhe-contracts/FHE.sol";
 contract Counter is BaseHook {
     using PoolIdLibrary for PoolKey;
 
-    //allow for more natural syntax with euint operations
-    //by utilising the FHE library
+    // NOTE: ---------------------------------------------------------
+    // more natural syntax with euint operations by using FHE library
+    // all euint types are wrapped forms of uint256
+    // therefore using library for uint256 works for all euint types
+    // ---------------------------------------------------------------
     using FHE for uint256;
 
     // NOTE: ---------------------------------------------------------
@@ -65,7 +68,7 @@ contract Counter is BaseHook {
         euint128 current = beforeSwapCount[key.toId()];
         beforeSwapCount[key.toId()] = current.add(FHE.asEuint128(1)); //add encrypted 1 to beforeSwapCount
 
-        FHE.allowThis(beforeSwapCount[key.toId()]);
+        FHE.allowThis(beforeSwapCount[key.toId()]); //allow this contract to access and use this new value
 
         return (BaseHook.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, 0);
     }
@@ -78,7 +81,7 @@ contract Counter is BaseHook {
         euint128 current = afterSwapCount[key.toId()];
         afterSwapCount[key.toId()] = current.add(FHE.asEuint128(1)); //add encrypted 1 to afterSwapCount
 
-        FHE.allowThis(afterSwapCount[key.toId()]);
+        FHE.allowThis(afterSwapCount[key.toId()]); //allow this contract to access and use this new value
 
         return (BaseHook.afterSwap.selector, 0);
     }
@@ -92,7 +95,7 @@ contract Counter is BaseHook {
         euint128 current = beforeAddLiquidityCount[key.toId()];
         beforeAddLiquidityCount[key.toId()] = current.add(FHE.asEuint128(1)); //add encrypted 1 to beforeAddLiquidityCount
 
-        FHE.allowThis(beforeAddLiquidityCount[key.toId()]);
+        FHE.allowThis(beforeAddLiquidityCount[key.toId()]); //allow this contract to access and use this new value
 
         return BaseHook.beforeAddLiquidity.selector;
     }
@@ -106,7 +109,7 @@ contract Counter is BaseHook {
         euint128 current = beforeRemoveLiquidityCount[key.toId()];
         beforeRemoveLiquidityCount[key.toId()] = current.add(FHE.asEuint128(1));
 
-        FHE.allowThis(beforeRemoveLiquidityCount[key.toId()]);
+        FHE.allowThis(beforeRemoveLiquidityCount[key.toId()]); //allow this contract to access and use this new value
 
         return BaseHook.beforeRemoveLiquidity.selector;
     }
