@@ -16,3 +16,9 @@
 [submodule "lib/cofhe-foundry-mocks"]
 	path = lib/cofhe-foundry-mocks
 	url = https://github.com/fhenixprotocol/cofhe-foundry-mocks
+[submodule "lib/openzeppelin-contracts-upgradeable"]
+	path = lib/openzeppelin-contracts-upgradeable
+	url = https://github.com/openzeppelin/openzeppelin-contracts-upgradeable
+[submodule "lib/openzeppelin-contracts"]
+	path = lib/openzeppelin-contracts
+	url = https://github.com/openzeppelin/openzeppelin-contracts
