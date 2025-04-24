@@ -12,25 +12,25 @@ import {BalanceDelta} from "v4-core/src/types/BalanceDelta.sol";
 import {BeforeSwapDelta, BeforeSwapDeltaLibrary} from "v4-core/src/types/BeforeSwapDelta.sol";
 
 //FHE Imports
-import { FHE, euint256 } from "@fhenixprotocol/cofhe-contracts/FHE.sol";
+import {FHE, euint128} from "@fhenixprotocol/cofhe-contracts/FHE.sol";
 
 contract Counter is BaseHook {
     using PoolIdLibrary for PoolKey;
 
-    //allow for more natural syntax with euint256 operations
+    //allow for more natural syntax with euint operations
     //by utilising the FHE library
-    using FHE for euint256;
+    using FHE for uint256;
 
     // NOTE: ---------------------------------------------------------
     // state variables should typically be unique to a pool
     // a single hook contract should be able to service multiple pools
     // ---------------------------------------------------------------
 
-    mapping(PoolId => euint256 count) public beforeSwapCount;
-    mapping(PoolId => euint256 count) public afterSwapCount;
+    mapping(PoolId => euint128 count) public beforeSwapCount;
+    mapping(PoolId => euint128 count) public afterSwapCount;
 
-    mapping(PoolId => euint256 count) public beforeAddLiquidityCount;
-    mapping(PoolId => euint256 count) public beforeRemoveLiquidityCount;
+    mapping(PoolId => euint128 count) public beforeAddLiquidityCount;
+    mapping(PoolId => euint128 count) public beforeRemoveLiquidityCount;
 
     constructor(IPoolManager _poolManager) BaseHook(_poolManager) {}
 
@@ -62,8 +62,10 @@ contract Counter is BaseHook {
         override
         returns (bytes4, BeforeSwapDelta, uint24)
     {
-        euint256 current = beforeSwapCount[key.toId()];
-        beforeSwapCount[key.toId()] = current.add(FHE.asEuint256(1)); //add encrypted 1 to beforeSwapCount
+        euint128 current = beforeSwapCount[key.toId()];
+        beforeSwapCount[key.toId()] = current.add(FHE.asEuint128(1)); //add encrypted 1 to beforeSwapCount
+
+        FHE.allowThis(beforeSwapCount[key.toId()]);
 
         return (BaseHook.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, 0);
     }
@@ -73,8 +75,10 @@ contract Counter is BaseHook {
         override
         returns (bytes4, int128)
     {
-        euint256 current = afterSwapCount[key.toId()];
-        afterSwapCount[key.toId()] = current.add(FHE.asEuint256(1)); //add encrypted 1 to afterSwapCount
+        euint128 current = afterSwapCount[key.toId()];
+        afterSwapCount[key.toId()] = current.add(FHE.asEuint128(1)); //add encrypted 1 to afterSwapCount
+
+        FHE.allowThis(afterSwapCount[key.toId()]);
 
         return (BaseHook.afterSwap.selector, 0);
     }
@@ -85,8 +89,10 @@ contract Counter is BaseHook {
         IPoolManager.ModifyLiquidityParams calldata,
         bytes calldata
     ) internal override returns (bytes4) {
-        euint256 current = beforeAddLiquidityCount[key.toId()];
-        beforeAddLiquidityCount[key.toId()] = current.add(FHE.asEuint256(1)); //add encrypted 1 to beforeAddLiquidityCount
+        euint128 current = beforeAddLiquidityCount[key.toId()];
+        beforeAddLiquidityCount[key.toId()] = current.add(FHE.asEuint128(1)); //add encrypted 1 to beforeAddLiquidityCount
+
+        FHE.allowThis(beforeAddLiquidityCount[key.toId()]);
 
         return BaseHook.beforeAddLiquidity.selector;
     }
@@ -97,8 +103,10 @@ contract Counter is BaseHook {
         IPoolManager.ModifyLiquidityParams calldata,
         bytes calldata
     ) internal override returns (bytes4) {
-        euint256 current = beforeRemoveLiquidityCount[key.toId()];
-        beforeRemoveLiquidityCount[key.toId()] = current.add(FHE.asEuint256(1));
+        euint128 current = beforeRemoveLiquidityCount[key.toId()];
+        beforeRemoveLiquidityCount[key.toId()] = current.add(FHE.asEuint128(1));
+
+        FHE.allowThis(beforeRemoveLiquidityCount[key.toId()]);
 
         return BaseHook.beforeRemoveLiquidity.selector;
     }
