@@ -13,7 +13,7 @@ import {IERC1155Receiver} from "@openzeppelin/contracts/token/ERC1155/IERC1155Re
 import {Currency, CurrencyLibrary} from "@uniswap/v4-core/src/types/Currency.sol";
 import {CurrencySettler} from "@uniswap/v4-core/test/utils/CurrencySettler.sol";
 import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
-import {BeforeSwapDelta, toBeforeSwapDelta} from "@uniswap/v4-core/src/types/BeforeSwapDelta.sol";
+import {BeforeSwapDelta, BeforeSwapDeltaLibrary} from "@uniswap/v4-core/src/types/BeforeSwapDelta.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
 import {EpochLibrary, Epoch} from "./lib/EpochLibrary.sol";
@@ -105,7 +105,7 @@ contract Iceberg is BaseHook {
             beforeRemoveLiquidity: false,
             afterAddLiquidity: false,
             afterRemoveLiquidity: false,
-            beforeSwap: false,
+            beforeSwap: true,
             afterSwap: true,
             beforeDonate: false,
             afterDonate: false,
@@ -189,7 +189,7 @@ contract Iceberg is BaseHook {
 
             (uint128 decryptedLiquidity, bool decrypted) = IFHERC20(order.token).getUnwrapResultSafe(address(this), liquidityHandle);
             if(!decrypted){
-                return (BaseHook.beforeSwap.selector, toBeforeSwapDelta(0, 0), uint24(0));
+                return (BaseHook.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, 0);
             }
             
             //value is decrypted
@@ -224,7 +224,7 @@ contract Iceberg is BaseHook {
             }
         }
 
-        return (BaseHook.beforeSwap.selector, toBeforeSwapDelta(0, 0), uint24(0));   //TODO edit beforeSwapDelta to reflect swap
+        return (BaseHook.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, 0);   //TODO edit beforeSwapDelta to reflect swap
     }
 
 
