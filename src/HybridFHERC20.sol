@@ -3,6 +3,7 @@
 pragma solidity ^0.8.25;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {IFHERC20} from "./interface/IFHERC20.sol";
 import {FHE, InEuint128, euint128} from "@fhenixprotocol/cofhe-contracts/FHE.sol";
 
 /**
@@ -10,7 +11,7 @@ import {FHE, InEuint128, euint128} from "@fhenixprotocol/cofhe-contracts/FHE.sol
  * Implementation of the bare minimum methods to make
  * the hook work with a hybrid FHE / ERC20 token
  */
-contract HybridFHERC20 is ERC20 {
+contract HybridFHERC20 is ERC20, IFHERC20 {
 
     //errors
     error HybridFHERC20__InvalidSender(address sender);
@@ -151,14 +152,22 @@ contract HybridFHERC20 is ERC20 {
         return _requestUnwrap(user, amount);
     }
 
+    function getUnwrapResult(address user, euint128 burnAmount) external returns(uint128 amount) {
+        return _getUnwrapResult(user, burnAmount);
+    }
+
+    function getUnwrapResultSafe(address user, euint128 burnAmount) external returns(uint128 amount, bool decrypted) {
+        return _getUnwrapResultSafe(user, burnAmount);
+    }
+
     function _requestUnwrap(address user, euint128 amount) internal returns(euint128 burnAmount) {
         burnAmount = _calculateBurnAmount(user, amount);
         //request decrpytion of burn amount
         FHE.decrypt(burnAmount);
     }
 
-    function _getUnwrapResult(address user, euint128 burnAmount) internal {
-        uint128 amount = FHE.getDecryptResult(burnAmount);
+    function _getUnwrapResult(address user, euint128 burnAmount) internal returns(uint128 amount) {
+        amount = FHE.getDecryptResult(burnAmount);
 
         //burn encrypted balance
         _burnEnc(user, burnAmount);
@@ -167,17 +176,17 @@ contract HybridFHERC20 is ERC20 {
         _mint(user, amount);
     }
 
-    function _getUnwrapResultSafe(address user, euint128 burnAmount) internal returns(bool) {
-        (uint128 amount, bool decrypted) = FHE.getDecryptResultSafe(burnAmount);
+    function _getUnwrapResultSafe(address user, euint128 burnAmount) internal returns(uint128 amount, bool decrypted) {
+        (amount, decrypted) = FHE.getDecryptResultSafe(burnAmount);
 
-        if(!decrypted) return false;
+        if(!decrypted){
+            return (0, false);
+        }
 
         //burn encrypted balance
         _burnEnc(user, burnAmount);
 
         //mint public balance
         _mint(user, amount);
-
-        return true;
     }
 }
