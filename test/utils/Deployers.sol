@@ -146,7 +146,7 @@ contract Deployers is Test {
 
     function deployToken(uint256 totalSupply) internal returns (HybridFHERC20 token) {
         token = new HybridFHERC20("TEST", "TEST");
-        token.mint(totalSupply);
+        token.mint(address(this), totalSupply);
     }
 
     function deploy2Tokens(uint256 totalSupply) internal returns (HybridFHERC20[] memory tokens) {
