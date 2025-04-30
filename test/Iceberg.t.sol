@@ -16,6 +16,8 @@ import {CurrencyLibrary, Currency} from "v4-core/src/types/Currency.sol";
 import {PoolSwapTest} from "v4-core/src/test/PoolSwapTest.sol";
 import {Iceberg} from "../src/Iceberg.sol";
 import {StateLibrary} from "v4-core/src/libraries/StateLibrary.sol";
+import {SortTokens} from "./utils/SortTokens.sol";
+import {Constants} from "v4-core/test/utils/Constants.sol";
 
 import {LiquidityAmounts} from "v4-core/test/utils/LiquidityAmounts.sol";
 import {IPositionManager} from "v4-periphery/src/interfaces/IPositionManager.sol";
@@ -24,6 +26,8 @@ import {Fixtures} from "./utils/Fixtures.sol";
 
 //FHE Imports
 import {FHE, euint128, euint128, euint32, ebool, InEuint128, InEuint32, InEbool} from "@fhenixprotocol/cofhe-contracts/FHE.sol";
+import {IFHERC20} from "../src/interface/IFHERC20.sol";
+import {HybridFHERC20} from "../src/HybridFHERC20.sol";
 import {CoFheTest} from "@fhenixprotocol/cofhe-foundry-mocks/CoFheTest.sol";
 
 contract IcebergTest is Test, Fixtures {
@@ -35,6 +39,8 @@ contract IcebergTest is Test, Fixtures {
     //test instance with useful utilities for testing FHE contracts locally
     CoFheTest CFT;
 
+    address private user = makeAddr("user");
+
     Iceberg hook;
     PoolId poolId;
 
@@ -42,15 +48,33 @@ contract IcebergTest is Test, Fixtures {
     int24 tickLower;
     int24 tickUpper;
 
+    Currency fheCurrency0;
+    Currency fheCurrency1;
+
+    HybridFHERC20 fheToken0;
+    HybridFHERC20 fheToken1;
+
     function setUp() public {
         //initialise new CoFheTest instance with logging turned on
         CFT = new CoFheTest(true);
 
+        fheToken0 = new HybridFHERC20("TOKEN0", "TOK0");
+        fheToken1 = new HybridFHERC20("TOKEN1", "TOK1");
+
+        vm.label(user, "user");
+        vm.label(address(this), "test");
+        vm.label(address(fheToken0), "token0");
+        vm.label(address(fheToken1), "token1");
+
+        vm.label(address(0x3BEc2F89c4B255E057aEE14923d18Bfa6DDd477F), "mysteryAddress");
+
         // creates the pool manager, utility routers, and test tokens
         deployFreshManagerAndRouters();
-        deployMintAndApprove2Currencies();
 
-        deployAndApprovePosm(manager);
+        vm.startPrank(user);
+        (fheCurrency0, fheCurrency1) = mintAndApprove2Currencies(address(fheToken0), address(fheToken1));
+
+        deployAndApprovePosm(manager, fheCurrency0, fheCurrency1);
 
         // Deploy the hook to an address with the correct flags
         address flags = address(
@@ -63,7 +87,6 @@ contract IcebergTest is Test, Fixtures {
         hook = Iceberg(flags);
 
         vm.label(address(hook), "hook");
-        vm.label(address(this), "test");
 
         // Create the pool
         key = PoolKey(currency0, currency1, 3000, 60, IHooks(hook));
@@ -94,13 +117,56 @@ contract IcebergTest is Test, Fixtures {
             block.timestamp,
             ZERO_BYTES
         );
+
+        vm.stopPrank();
     }
 
     function testPlaceIcebergOrder() public {
-        InEuint32 memory lower = CFT.createInEuint32(10, address(this));
-        InEbool memory zeroForOne = CFT.createInEbool(true, address(this));
-        InEuint128 memory liquidity = CFT.createInEuint128(100, address(this));
+        InEuint32 memory lower = CFT.createInEuint32(10, user);
+        InEbool memory zeroForOne = CFT.createInEbool(false, user);
+        InEuint128 memory liquidity = CFT.createInEuint128(100, user);
 
+        vm.prank(user);
         hook.placeIcebergOrder(key, lower, zeroForOne, liquidity);
+    }
+
+
+    // --------------- Helper Functions ------------------
+    function mintAndApprove2Currencies(address tokenA, address tokenB) internal returns (Currency, Currency) {
+        Currency _currencyA = mintAndApproveCurrency(tokenA);
+        Currency _currencyB = mintAndApproveCurrency(tokenB);
+
+        (currency0, currency1) =
+            SortTokens.sort(Currency.unwrap(_currencyA),Currency.unwrap(_currencyB));
+        return (currency0, currency1);
+    }
+
+    function mintAndApproveCurrency(address token) internal returns (Currency currency) {
+        IFHERC20(token).mint(user, 2 ** 250);
+        IFHERC20(token).mint(address(this), 2 ** 250);
+
+        //InEuint128 memory amount = CFT.createInEuint128(2 ** 120, address(this));
+        InEuint128 memory amountUser = CFT.createInEuint128(2 ** 120, user);
+
+        //IFHERC20(token).mintEncrypted(address(this), amount);
+        IFHERC20(token).mintEncrypted(user, amountUser);
+
+        address[9] memory toApprove = [
+            address(swapRouter),
+            address(swapRouterNoChecks),
+            address(modifyLiquidityRouter),
+            address(modifyLiquidityNoChecks),
+            address(donateRouter),
+            address(takeRouter),
+            address(claimsRouter),
+            address(nestedActionRouter.executor()),
+            address(actionsRouter)
+        ];
+
+        for (uint256 i = 0; i < toApprove.length; i++) {
+            IFHERC20(token).approve(toApprove[i], Constants.MAX_UINT256);
+        }
+
+        return Currency.wrap(token);
     }
 }
