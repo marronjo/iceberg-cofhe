@@ -28,7 +28,9 @@ contract HybridFHERC20 is ERC20, IFHERC20 {
     euint128 private immutable ZERO = FHE.asEuint128(0);
     uint256 private immutable TIMEOUT = 100;
 
-    constructor(string memory name, string memory symbol) ERC20(name, symbol) {}
+    constructor(string memory name, string memory symbol) ERC20(name, symbol) {
+        FHE.allowThis(ZERO);
+    }
 
     // ----------- Public Mint Functions --------------------
     function mint(address user, uint256 amount) public {
