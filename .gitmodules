@@ -22,3 +22,6 @@
 [submodule "lib/openzeppelin-contracts"]
 	path = lib/openzeppelin-contracts
 	url = https://github.com/openzeppelin/openzeppelin-contracts
+[submodule "lib/cofhe-mock-contracts"]
+	path = lib/cofhe-mock-contracts
+	url = https://github.com/fhenixprotocol/cofhe-mock-contracts
