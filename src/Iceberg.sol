@@ -60,6 +60,8 @@ contract Iceberg is BaseHook {
 
     bytes internal constant ZERO_BYTES = bytes("");
 
+    euint128 private ZERO = FHE.asEuint128(0);
+
     Epoch private constant EPOCH_DEFAULT = Epoch.wrap(0);
 
     mapping(bytes32 tokenId => euint128 amount) claimableTokens;
@@ -268,10 +270,11 @@ contract Iceberg is BaseHook {
             epochInfo.liquidity[msg.sender] = FHE.add(epochInfo.liquidity[msg.sender], _liquidity);
         }
 
-        euint128 zero = FHE.asEuint128(0);
+        euint128 token0Amount = FHE.select(_zeroForOne, _liquidity, ZERO);
+        euint128 token1Amount = FHE.select(_zeroForOne, ZERO, _liquidity);
 
-        euint128 token0Amount = FHE.select(_zeroForOne, _liquidity, zero);
-        euint128 token1Amount = FHE.select(_zeroForOne, zero, _liquidity);
+        FHE.allow(token0Amount, Currency.unwrap(key.currency0));
+        FHE.allow(token1Amount, Currency.unwrap(key.currency1));
 
         // send both tokens, one amount is encrypted zero to obscure trade direction
         IFHERC20(Currency.unwrap(key.currency0)).transferFromEncrypted(msg.sender, address(this), token0Amount);
@@ -366,7 +369,7 @@ contract Iceberg is BaseHook {
         }
     }
 
-     function getTokenId(PoolKey calldata key, uint32 tickLower, bool zeroForOne) private pure returns(bytes32) {
+    function getTokenId(PoolKey calldata key, uint32 tickLower, bool zeroForOne) private pure returns(bytes32) {
         return keccak256(abi.encodePacked(key.toId(), tickLower, zeroForOne));
     }
 
