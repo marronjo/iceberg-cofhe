@@ -18,6 +18,7 @@ import {Iceberg} from "../src/Iceberg.sol";
 import {StateLibrary} from "v4-core/src/libraries/StateLibrary.sol";
 import {SortTokens} from "./utils/SortTokens.sol";
 import {Constants} from "v4-core/test/utils/Constants.sol";
+import {EpochLibrary, Epoch} from "../src/lib/EpochLibrary.sol";
 
 import {LiquidityAmounts} from "v4-core/test/utils/LiquidityAmounts.sol";
 import {IPositionManager} from "v4-periphery/src/interfaces/IPositionManager.sol";
@@ -125,7 +126,7 @@ contract IcebergTest is Test, Fixtures {
 
     // tick lower should be 0 since pool was initialized with 1-1 SQRT Price
     // e.g. tick price has not moved up or down
-    function testTickLower() public view {
+    function testTickLowerLast() public view {
         assertEq(hook.getTickLowerLast(key.toId()), 0);
     }
 
@@ -139,14 +140,40 @@ contract IcebergTest is Test, Fixtures {
         assertEq(hook.getTickLowerLast(differentKey.toId()), 22997);
     }
 
-
-    function testPlaceIcebergOrder() public {
-        InEuint32 memory lower = CFT.createInEuint32(10, user);
-        InEbool memory zeroForOne = CFT.createInEbool(false, user);
-        InEuint128 memory liquidity = CFT.createInEuint128(100, user);
-
+    function testPlaceIcebergOrderToken0() public {
         euint128 userBalanceBefore0 = fheToken0.encBalances(user);
         euint128 userBalanceBefore1 = fheToken1.encBalances(user);
+
+        InEuint32 memory lower = CFT.createInEuint32(0, user);
+        InEbool memory zeroForOne = CFT.createInEbool(true, user);
+        InEuint128 memory liquidity = CFT.createInEuint128(100, user);
+
+        vm.prank(user);
+        hook.placeIcebergOrder(key, lower, zeroForOne, liquidity);
+
+        // Check hook balances of token0 & token1
+        // since zeroForOne = true
+        // user sends hook token0 e.g. swap token0 for token1
+        // fheToken0 : user -> hook encrypted 0
+        // fheToken1 : user -> hook encrypted 100
+        CFT.assertHashValue(fheToken0.encBalances(address(hook)), 100);
+        CFT.assertHashValue(fheToken1.encBalances(address(hook)), 0);
+
+        uint256 userBalanceAfter0 = CFT.mockStorage(euint128.unwrap(fheToken0.encBalances(user)));
+        uint256 userBalanceAfter1 = CFT.mockStorage(euint128.unwrap(fheToken1.encBalances(user)));
+
+        // token0 balance after should be 100 tokens less than balance before
+        CFT.assertHashValue(userBalanceBefore0, uint128(userBalanceAfter0 + 100));
+        CFT.assertHashValue(userBalanceBefore1, uint128(userBalanceAfter1));
+    }
+
+    function testPlaceIcebergOrderToken1() public {
+        euint128 userBalanceBefore0 = fheToken0.encBalances(user);
+        euint128 userBalanceBefore1 = fheToken1.encBalances(user);
+
+        InEuint32 memory lower = CFT.createInEuint32(0, user);
+        InEbool memory zeroForOne = CFT.createInEbool(false, user);
+        InEuint128 memory liquidity = CFT.createInEuint128(100, user);
 
         vm.prank(user);
         hook.placeIcebergOrder(key, lower, zeroForOne, liquidity);
@@ -163,7 +190,7 @@ contract IcebergTest is Test, Fixtures {
         uint256 userBalanceAfter1 = CFT.mockStorage(euint128.unwrap(fheToken1.encBalances(user)));
 
         CFT.assertHashValue(userBalanceBefore0, uint128(userBalanceAfter0));
-        // balance after should be 100 tokens less than balance before
+        // token1 balance after should be 100 tokens less than balance before
         CFT.assertHashValue(userBalanceBefore1, uint128(userBalanceAfter1 + 100));
     }
 
@@ -181,11 +208,19 @@ contract IcebergTest is Test, Fixtures {
         assertEq(address(q), address(0));
     }
 
-
-
     //
     // --------------- Helper Functions ------------------
     //
+    function placeIcebergOrder(uint32 _lower, bool _zeroForOne, uint128 _liquidity) private returns(euint32, ebool, euint128) {
+        InEuint32 memory lower = CFT.createInEuint32(_lower, user);
+        InEbool memory zeroForOne = CFT.createInEbool(_zeroForOne, user);
+        InEuint128 memory liquidity = CFT.createInEuint128(_liquidity, user);
+
+        hook.placeIcebergOrder(key, lower, zeroForOne, liquidity);
+
+        return(FHE.asEuint32(lower), FHE.asEbool(zeroForOne), FHE.asEuint128(liquidity));
+    }
+
     function mintAndApprove2Currencies(address tokenA, address tokenB) internal returns (Currency, Currency) {
         Currency _currencyA = mintAndApproveCurrency(tokenA);
         Currency _currencyB = mintAndApproveCurrency(tokenB);
