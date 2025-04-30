@@ -26,8 +26,9 @@ import {ActionsRouter} from "v4-core/src/test/ActionsRouter.sol";
 import {LiquidityAmounts} from "v4-core/test/utils/LiquidityAmounts.sol";
 import {StateLibrary} from "v4-core/src/libraries/StateLibrary.sol";
 
-//custom FHERC20 token
-import {HybridFHERC20} from "../../src/HybridFHERC20.sol";
+import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SortTokens} from "./SortTokens.sol";
 
 contract Deployers is Test {
@@ -109,16 +110,16 @@ contract Deployers is Test {
     // You must have first initialised the routers with deployFreshManagerAndRouters
     // If you only need the currencies (and not approvals) call deployAndMint2Currencies
     function deployMintAndApprove2Currencies() internal returns (Currency, Currency) {
-        Currency _currencyA = deployMintAndApproveCurrency();
-        Currency _currencyB = deployMintAndApproveCurrency();
+        Currency _currencyA = mintAndApproveCurrency();
+        Currency _currencyB = mintAndApproveCurrency();
 
         (currency0, currency1) =
-            SortTokens.sort(HybridFHERC20(Currency.unwrap(_currencyA)),HybridFHERC20(Currency.unwrap(_currencyB)));
+            SortTokens.sort(Currency.unwrap(_currencyA),Currency.unwrap(_currencyB));
         return (currency0, currency1);
     }
 
-    function deployMintAndApproveCurrency() internal returns (Currency currency) {
-       HybridFHERC20 token = deployToken(2 ** 255);
+    function mintAndApproveCurrency() internal returns (Currency currency) {
+        MockERC20 token = deployToken(2 ** 255);
 
         address[9] memory toApprove = [
             address(swapRouter),
@@ -140,25 +141,21 @@ contract Deployers is Test {
     }
 
     function deployAndMint2Currencies() internal returns (Currency, Currency) {
-       HybridFHERC20[] memory tokens = deploy2Tokens(2 ** 255);
-        return SortTokens.sort(tokens[0], tokens[1]);
+        MockERC20[] memory tokens = deployTokens(2, 2 ** 255);
+        return SortTokens.sort(address(tokens[0]), address(tokens[1]));
     }
 
-    function deployToken(uint256 totalSupply) internal returns (HybridFHERC20 token) {
-        token = new HybridFHERC20("TEST", "TEST");
+    function deployToken(uint256 totalSupply) internal returns (MockERC20 token) {
+        token = new MockERC20("TEST", "TEST", 18);
         token.mint(address(this), totalSupply);
     }
 
-    function deploy2Tokens(uint256 totalSupply) internal returns (HybridFHERC20[] memory tokens) {
-        tokens = new HybridFHERC20[](2);
-        
-        tokens[0] = new HybridFHERC20("TEST0", "TEST0");
-        tokens[0].mint(address(this), totalSupply);
-        vm.label(address(tokens[0]), "token0");
-
-        tokens[1] = new HybridFHERC20("TEST1", "TEST1");
-        tokens[1].mint(address(this), totalSupply);
-        vm.label(address(tokens[1]), "token1");
+    function deployTokens(uint8 count, uint256 totalSupply) internal returns (MockERC20[] memory tokens) {
+        tokens = new MockERC20[](count);
+        for (uint8 i = 0; i < count; i++) {
+            tokens[i] = new MockERC20("TEST", "TEST", 18);
+            tokens[i].mint(address(this), totalSupply);
+        }
     }
 
     function initPool(Currency _currency0, Currency _currency1, IHooks hooks, uint24 fee, uint160 sqrtPriceX96)
