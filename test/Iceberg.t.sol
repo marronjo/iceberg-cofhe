@@ -24,6 +24,8 @@ import {IPositionManager} from "v4-periphery/src/interfaces/IPositionManager.sol
 import {EasyPosm} from "./utils/EasyPosm.sol";
 import {Fixtures} from "./utils/Fixtures.sol";
 
+import {Queue} from "../src/Queue.sol";
+
 //FHE Imports
 import {FHE, euint128, euint128, euint32, ebool, InEuint128, InEuint32, InEbool} from "@fhenixprotocol/cofhe-contracts/FHE.sol";
 import {IFHERC20} from "../src/interface/IFHERC20.sol";
@@ -54,6 +56,8 @@ contract IcebergTest is Test, Fixtures {
     HybridFHERC20 fheToken0;
     HybridFHERC20 fheToken1;
 
+    uint160 constant SQRT_RATIO_10_1 = 250541448375047931186413801569;
+
     function setUp() public {
         //initialise new CoFheTest instance with logging turned on
         CFT = new CoFheTest(true);
@@ -65,8 +69,6 @@ contract IcebergTest is Test, Fixtures {
         vm.label(address(this), "test");
         vm.label(address(fheToken0), "token0");
         vm.label(address(fheToken1), "token1");
-
-        vm.label(address(0x3BEc2F89c4B255E057aEE14923d18Bfa6DDd477F), "mysteryAddress");
 
         // creates the pool manager, utility routers, and test tokens
         deployFreshManagerAndRouters();
@@ -121,17 +123,69 @@ contract IcebergTest is Test, Fixtures {
         vm.stopPrank();
     }
 
+    // tick lower should be 0 since pool was initialized with 1-1 SQRT Price
+    // e.g. tick price has not moved up or down
+    function testTickLower() public view {
+        assertEq(hook.getTickLowerLast(key.toId()), 0);
+    }
+
+    // init with 10-1 price ratio, 61 tick spacing
+    // log_1.0001(10) ≈ 23026.25 -> floor = 23026
+    // (23026 / 61) * 61 -> 377 * 61 = 22997
+    function testGetTickLowerLastWithDifferentPrice() public {
+        PoolKey memory differentKey =
+            PoolKey(Currency.wrap(address(fheToken0)), Currency.wrap(address(fheToken1)), 3000, 61, hook);
+        manager.initialize(differentKey, SQRT_RATIO_10_1);
+        assertEq(hook.getTickLowerLast(differentKey.toId()), 22997);
+    }
+
+
     function testPlaceIcebergOrder() public {
+        InEuint32 memory lower = CFT.createInEuint32(10, user);
+        InEbool memory zeroForOne = CFT.createInEbool(false, user);
+        InEuint128 memory liquidity = CFT.createInEuint128(100, user);
+
+        euint128 userBalanceBefore0 = fheToken0.encBalances(user);
+        euint128 userBalanceBefore1 = fheToken1.encBalances(user);
+
+        vm.prank(user);
+        hook.placeIcebergOrder(key, lower, zeroForOne, liquidity);
+
+        // Check hook balances of token0 & token1
+        // since zeroForOne = false
+        // user sends hook token1 e.g. swap token1 for token0
+        // fheToken0 : user -> hook encrypted 0
+        // fheToken1 : user -> hook encrypted 100
+        CFT.assertHashValue(fheToken0.encBalances(address(hook)), 0);
+        CFT.assertHashValue(fheToken1.encBalances(address(hook)), 100);
+
+        uint256 userBalanceAfter0 = CFT.mockStorage(euint128.unwrap(fheToken0.encBalances(user)));
+        uint256 userBalanceAfter1 = CFT.mockStorage(euint128.unwrap(fheToken1.encBalances(user)));
+
+        CFT.assertHashValue(userBalanceBefore0, uint128(userBalanceAfter0));
+        // balance after should be 100 tokens less than balance before
+        CFT.assertHashValue(userBalanceBefore1, uint128(userBalanceAfter1 + 100));
+    }
+
+    function testQueueZeroAfterPlaceIcebergOrder() public {
         InEuint32 memory lower = CFT.createInEuint32(10, user);
         InEbool memory zeroForOne = CFT.createInEbool(false, user);
         InEuint128 memory liquidity = CFT.createInEuint128(100, user);
 
         vm.prank(user);
         hook.placeIcebergOrder(key, lower, zeroForOne, liquidity);
+
+        Queue q = hook.poolQueue(keccak256(abi.encode(key)));
+
+        // ensure queue is not initialised yet
+        assertEq(address(q), address(0));
     }
 
 
+
+    //
     // --------------- Helper Functions ------------------
+    //
     function mintAndApprove2Currencies(address tokenA, address tokenB) internal returns (Currency, Currency) {
         Currency _currencyA = mintAndApproveCurrency(tokenA);
         Currency _currencyB = mintAndApproveCurrency(tokenB);
