@@ -73,7 +73,7 @@ contract Iceberg is BaseHook {
     // bundle encrypted zeroForOne data into single struct
     // zeroForOne must be decrypted to be used as a key
     struct EncEpochInfo {
-        ebool filled;
+        bool filled;
         Currency currency0;
         Currency currency1;
         euint128 liquidityZeroForOne;
@@ -91,7 +91,7 @@ contract Iceberg is BaseHook {
     }
 
     //used to find order details based on encrypted handle from decryption queue
-    mapping(euint128 liquidityHandle => DecryptedOrder) orderInfo;
+    mapping(euint128 liquidityHandle => DecryptedOrder) public orderInfo;
 
     // each pool has separate decrpytion queue for encrypted orders
     mapping(bytes32 key => Queue queue) public poolQueue;
@@ -327,6 +327,8 @@ contract Iceberg is BaseHook {
 
             //request unwrap of order amount from coprocessor
             address token = zeroForOne ? address(Currency.unwrap(key.currency0)) : address(Currency.unwrap(key.currency1));
+
+            FHE.allow(liquidityTotal, token);
             IFHERC20(token).requestUnwrap(address(this), liquidityTotal);
 
             //add order key to decryption queue
@@ -337,8 +339,6 @@ contract Iceberg is BaseHook {
             //add order details to mapping
             //used to query in beforeSwap hook
             orderInfo[liquidityTotal] = DecryptedOrder(zeroForOne, lower, token);
-
-            //continue
         }
     }
 
