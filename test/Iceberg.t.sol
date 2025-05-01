@@ -121,6 +121,12 @@ contract IcebergTest is Test, Fixtures {
             ZERO_BYTES
         );
 
+        fheToken0.approve(address(swapRouter), type(uint256).max);
+        fheToken1.approve(address(swapRouter), type(uint256).max);
+
+        fheToken0.approve(address(manager), type(uint256).max);
+        fheToken1.approve(address(manager), type(uint256).max);
+
         vm.stopPrank();
     }
 
@@ -208,6 +214,69 @@ contract IcebergTest is Test, Fixtures {
         assertEq(address(q), address(0));
     }
 
+    function testQueueEmptyAfterSwap() public {
+        IPoolManager.SwapParams memory params = IPoolManager.SwapParams({
+            zeroForOne: true,
+            amountSpecified: 100,
+            sqrtPriceLimitX96: MIN_PRICE_LIMIT
+        });
+
+        vm.prank(user);
+        swapRouter.swap(key, params, _defaultTestSettings(), ZERO_BYTES);
+
+        Queue queue = hook.poolQueue(keccak256(abi.encode(key)));
+
+        assertTrue(queue.isEmpty());
+    }
+
+    function testExistsAfterPlaceIcebergOrder() public {
+        int24 lower = 0;
+        InEbool memory zeroForOne = CFT.createInEbool(false, user);
+        InEuint128 memory liquidity = CFT.createInEuint128(987654321, user);
+
+        //user places limit order at given tick lower
+        vm.prank(user);
+        hook.placeIcebergOrder(key, lower, zeroForOne, liquidity);
+
+        //another user swaps large amount in opposite direction
+        doSwap(true, 12345678910);
+
+        Epoch epoch = hook.getEncEpoch(key, lower);
+
+        assertTrue(EpochLibrary.equals(epoch, Epoch.wrap(1)));
+
+        (
+            bool filled, 
+            Currency curr0, 
+            Currency curr1,
+            euint128 liqZero,
+            euint128 liqOne
+        ) = hook.encEpochInfos(epoch);
+
+        assertFalse(filled);
+        assertEq(Currency.unwrap(curr0), Currency.unwrap(key.currency0));
+        assertEq(Currency.unwrap(curr1), Currency.unwrap(key.currency1));
+        CFT.assertHashValue(liqZero, 0);            //zeroForOne liquidity should be 0
+        CFT.assertHashValue(liqOne, 987654321);     //oneForZero liquidity should be 987654321 from iceberg order above
+
+        Queue queue = hook.poolQueue(keccak256(abi.encode(key)));
+        assertFalse(queue.isEmpty());
+
+        euint128 top = queue.peek();
+
+        CFT.assertHashValue(top, 987654321);
+
+        (
+            bool orderZeroForOne,
+            int24 orderTickLower,
+            address token
+        ) = hook.orderInfo(top);
+
+        assertEq(orderZeroForOne, false);
+        assertEq(orderTickLower, 0);
+        assertEq(token, Currency.unwrap(key.currency1));
+    }
+
     //
     // --------------- Helper Functions ------------------
     //
@@ -219,6 +288,18 @@ contract IcebergTest is Test, Fixtures {
 
         return(FHE.asEbool(zeroForOne), FHE.asEuint128(liquidity));
     }
+
+    function doSwap(bool zeroForOne, int256 amount) private {
+        IPoolManager.SwapParams memory params = IPoolManager.SwapParams({
+            zeroForOne: zeroForOne,
+            amountSpecified: amount,
+            sqrtPriceLimitX96: zeroForOne ? MIN_PRICE_LIMIT : MAX_PRICE_LIMIT
+        });
+
+        vm.prank(user);
+        swapRouter.swap(key, params, _defaultTestSettings(), ZERO_BYTES);
+    }    
+    
 
     function mintAndApprove2Currencies(address tokenA, address tokenB) internal returns (Currency, Currency) {
         Currency _currencyA = mintAndApproveCurrency(tokenA);
@@ -256,5 +337,9 @@ contract IcebergTest is Test, Fixtures {
         }
 
         return Currency.wrap(token);
+    }
+
+    function _defaultTestSettings() internal pure returns (PoolSwapTest.TestSettings memory testSetting) {
+        return PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false});
     }
 }
