@@ -229,7 +229,55 @@ contract IcebergTest is Test, Fixtures {
         assertTrue(queue.isEmpty());
     }
 
-    function testExistsAfterPlaceIcebergOrder() public {
+    function testExistsAfterPlaceIcebergOrderZeroForOne() public {
+        int24 lower = 0;
+        InEbool memory zeroForOne = CFT.createInEbool(true, user);
+        InEuint128 memory liquidity = CFT.createInEuint128(1000000, user);
+
+        //user places limit order at given tick lower
+        vm.prank(user);
+        hook.placeIcebergOrder(key, lower, zeroForOne, liquidity);
+
+        //another user swaps large amount in opposite direction
+        doSwap(false, -1e18, 60);
+
+        Epoch epoch = hook.getEncEpoch(key, lower);
+
+        assertTrue(EpochLibrary.equals(epoch, Epoch.wrap(1)));
+
+        (
+            bool filled, 
+            Currency curr0, 
+            Currency curr1,
+            euint128 liqZero,
+            euint128 liqOne
+        ) = hook.encEpochInfos(epoch);
+
+        assertFalse(filled);
+        assertEq(Currency.unwrap(curr0), Currency.unwrap(key.currency0));
+        assertEq(Currency.unwrap(curr1), Currency.unwrap(key.currency1));
+        CFT.assertHashValue(liqZero, 1000000);            //zeroForOne liquidity should be 1000000 from iceberg order above
+        CFT.assertHashValue(liqOne, 0);                   //oneForZero liquidity should be 0
+
+        Queue queue = hook.poolQueue(keccak256(abi.encode(key)));
+        assertFalse(queue.isEmpty());
+
+        euint128 top = queue.peek();
+
+        CFT.assertHashValue(top, 1000000);
+
+        (
+            bool orderZeroForOne,
+            int24 orderTickLower,
+            address token
+        ) = hook.orderInfo(top);
+
+        assertEq(orderZeroForOne, true);
+        assertEq(orderTickLower, 0);
+        assertEq(token, Currency.unwrap(key.currency0));
+    }
+
+    function testExistsAfterPlaceIcebergOrderOneForZero() public {
         int24 lower = 0;
         InEbool memory zeroForOne = CFT.createInEbool(false, user);
         InEuint128 memory liquidity = CFT.createInEuint128(987654321, user);
@@ -289,6 +337,17 @@ contract IcebergTest is Test, Fixtures {
         return(FHE.asEbool(zeroForOne), FHE.asEuint128(liquidity));
     }
 
+    function doSwap(bool zeroForOne, int256 amount, int24 tick) private {
+        IPoolManager.SwapParams memory params = IPoolManager.SwapParams({
+            zeroForOne: zeroForOne,
+            amountSpecified: amount,
+            sqrtPriceLimitX96: TickMath.getSqrtPriceAtTick(tick)
+        });
+
+        vm.prank(user);
+        swapRouter.swap(key, params, _defaultTestSettings(), ZERO_BYTES);
+    }  
+
     function doSwap(bool zeroForOne, int256 amount) private {
         IPoolManager.SwapParams memory params = IPoolManager.SwapParams({
             zeroForOne: zeroForOne,
@@ -340,6 +399,6 @@ contract IcebergTest is Test, Fixtures {
     }
 
     function _defaultTestSettings() internal pure returns (PoolSwapTest.TestSettings memory testSetting) {
-        return PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false});
+        return PoolSwapTest.TestSettings({takeClaims: true, settleUsingBurn: false});
     }
 }

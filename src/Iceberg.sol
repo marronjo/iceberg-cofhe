@@ -226,6 +226,8 @@ contract Iceberg is BaseHook {
 
                 //IFHERC20(Currency.unwrap(key.currency0)).wrap(amount0); //encrypted wrap newly received (taken) token0
             }
+
+            //TODO set epoch to filled
         }
 
         return (BaseHook.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, 0);   //TODO edit beforeSwapDelta to reflect swap
