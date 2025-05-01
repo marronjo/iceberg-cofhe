@@ -144,7 +144,7 @@ contract IcebergTest is Test, Fixtures {
         euint128 userBalanceBefore0 = fheToken0.encBalances(user);
         euint128 userBalanceBefore1 = fheToken1.encBalances(user);
 
-        InEuint32 memory lower = CFT.createInEuint32(0, user);
+        int24 lower = 0;
         InEbool memory zeroForOne = CFT.createInEbool(true, user);
         InEuint128 memory liquidity = CFT.createInEuint128(100, user);
 
@@ -171,7 +171,7 @@ contract IcebergTest is Test, Fixtures {
         euint128 userBalanceBefore0 = fheToken0.encBalances(user);
         euint128 userBalanceBefore1 = fheToken1.encBalances(user);
 
-        InEuint32 memory lower = CFT.createInEuint32(0, user);
+        int24 lower = 0;
         InEbool memory zeroForOne = CFT.createInEbool(false, user);
         InEuint128 memory liquidity = CFT.createInEuint128(100, user);
 
@@ -195,7 +195,7 @@ contract IcebergTest is Test, Fixtures {
     }
 
     function testQueueZeroAfterPlaceIcebergOrder() public {
-        InEuint32 memory lower = CFT.createInEuint32(10, user);
+        int24 lower = 60;
         InEbool memory zeroForOne = CFT.createInEbool(false, user);
         InEuint128 memory liquidity = CFT.createInEuint128(100, user);
 
@@ -211,14 +211,13 @@ contract IcebergTest is Test, Fixtures {
     //
     // --------------- Helper Functions ------------------
     //
-    function placeIcebergOrder(uint32 _lower, bool _zeroForOne, uint128 _liquidity) private returns(euint32, ebool, euint128) {
-        InEuint32 memory lower = CFT.createInEuint32(_lower, user);
+    function placeIcebergOrder(int24 _lower, bool _zeroForOne, uint128 _liquidity) private returns(ebool, euint128) {
         InEbool memory zeroForOne = CFT.createInEbool(_zeroForOne, user);
         InEuint128 memory liquidity = CFT.createInEuint128(_liquidity, user);
 
-        hook.placeIcebergOrder(key, lower, zeroForOne, liquidity);
+        hook.placeIcebergOrder(key, _lower, zeroForOne, liquidity);
 
-        return(FHE.asEuint32(lower), FHE.asEbool(zeroForOne), FHE.asEuint128(liquidity));
+        return(FHE.asEbool(zeroForOne), FHE.asEuint128(liquidity));
     }
 
     function mintAndApprove2Currencies(address tokenA, address tokenB) internal returns (Currency, Currency) {
