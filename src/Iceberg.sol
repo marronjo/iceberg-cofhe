@@ -70,15 +70,19 @@ contract Iceberg is BaseHook {
     mapping(PoolId => int24) public tickLowerLasts;
     Epoch public epochNext = Epoch.wrap(1);
 
+    // bundle encrypted zeroForOne data into single struct
+    // zeroForOne must be decrypted to be used as a key
     struct EncEpochInfo {
         ebool filled;
         Currency currency0;
         Currency currency1;
-        euint128 token0Total;
-        euint128 token1Total;
-        euint128 liquidityTotal;
-        mapping(address => euint128) liquidity;
+        euint128 liquidityZeroForOne;
+        euint128 liquidityOneForZero;
+        mapping(address => euint128) liquidityMapZeroForOne;
+        mapping(address => euint128) liquidityMapOneForZero;
     }
+
+    //TODO Decrypted Epoch
 
     struct DecryptedOrder {
         bool zeroForOne;
@@ -92,7 +96,7 @@ contract Iceberg is BaseHook {
     // each pool has separate decrpytion queue for encrypted orders
     mapping(bytes32 key => Queue queue) public poolQueue;
 
-    mapping(bytes32 key => mapping(euint32 tickLower => mapping(ebool zeroForOne => Epoch))) public epochs;
+    mapping(bytes32 key => mapping(int24 tickLower => Epoch)) public epochs;
     mapping(Epoch => EncEpochInfo) public encEpochInfos;
 
     mapping(bytes32 tokenId => euint128 totalSupply) public totalSupply;
@@ -126,16 +130,12 @@ contract Iceberg is BaseHook {
         tickLowerLasts[poolId] = tickLower;
     }
 
-    function getEncEpoch(PoolKey memory key, euint32 tickLower, ebool zeroForOne) public view returns (Epoch) {
-        return epochs[keccak256(abi.encode(key))][tickLower][zeroForOne];
+    function getEncEpoch(PoolKey memory key, int24 tickLower) public view returns (Epoch) {
+        return epochs[keccak256(abi.encode(key))][tickLower];
     }
 
-    function setEncEpoch(PoolKey memory key, euint32 tickLower, ebool zeroForOne, Epoch epoch) private {
-        epochs[keccak256(abi.encode(key))][tickLower][zeroForOne] = epoch;
-    }
-
-    function getEncEpochLiquidity(Epoch epoch, address owner) external view returns (euint128) {
-        return encEpochInfos[epoch].liquidity[owner];
+    function setEncEpoch(PoolKey memory key, int24 tickLower, Epoch epoch) private {
+        epochs[keccak256(abi.encode(key))][tickLower] = epoch;
     }
 
     function getTick(PoolId poolId) private view returns (int24 tick) {
@@ -198,7 +198,9 @@ contract Iceberg is BaseHook {
             //pop from queue since it is no longer needed
             queue.pop();
 
-            BalanceDelta delta = _swapPoolManager(key, order.zeroForOne, -int256(uint256(decryptedLiquidity)));   
+            BalanceDelta delta = _swapPoolManager(key, order.zeroForOne, -int256(uint256(decryptedLiquidity))); 
+
+            //TODO add values to decrypted Epoch  
 
             uint128 amount0;
             uint128 amount1;
@@ -230,7 +232,7 @@ contract Iceberg is BaseHook {
     }
 
 
-    function placeIcebergOrder(PoolKey calldata key, InEuint32 calldata tickLower, InEbool calldata zeroForOne, InEuint128 calldata liquidity)
+    function placeIcebergOrder(PoolKey calldata key, int24 tickLower, InEbool calldata zeroForOne, InEuint128 calldata liquidity)
         external
         //onlyValidPools(key.hooks)
     {
@@ -239,7 +241,6 @@ contract Iceberg is BaseHook {
         //FHE Require, liquidity must be > 0
         //FHE.req(FHE.gt(_liquidity, FHE.asEuint128(0)));
 
-        euint32 _tickLower = FHE.asEuint32(tickLower);
         ebool _zeroForOne = FHE.asEbool(zeroForOne);
 
         //generate unique tokenId based on inputs
@@ -251,11 +252,11 @@ contract Iceberg is BaseHook {
         //totalSupply[tokenId] = FHE.add(totalSupply[tokenId], _liquidity);
 
         EncEpochInfo storage epochInfo;
-        Epoch epoch = getEncEpoch(key, _tickLower, _zeroForOne);
+        Epoch epoch = getEncEpoch(key, tickLower);
 
         if (epoch.equals(EPOCH_DEFAULT)) {
             unchecked {
-                setEncEpoch(key, _tickLower, _zeroForOne, epoch = epochNext);
+                setEncEpoch(key, tickLower, epoch = epochNext);
                 epochNext = epoch.unsafeIncrement();
             }
             epochInfo = encEpochInfos[epoch];
@@ -266,8 +267,11 @@ contract Iceberg is BaseHook {
         }
 
         unchecked {
-            epochInfo.liquidityTotal = FHE.add(epochInfo.liquidityTotal, _liquidity);
-            epochInfo.liquidity[msg.sender] = FHE.add(epochInfo.liquidity[msg.sender], _liquidity);
+            epochInfo.liquidityZeroForOne = FHE.select(_zeroForOne, FHE.add(epochInfo.liquidityZeroForOne, _liquidity), epochInfo.liquidityZeroForOne);
+            epochInfo.liquidityOneForZero = FHE.select(_zeroForOne, epochInfo.liquidityOneForZero, FHE.add(epochInfo.liquidityOneForZero, _liquidity));
+
+            epochInfo.liquidityMapZeroForOne[msg.sender] = FHE.select(_zeroForOne, FHE.add(epochInfo.liquidityMapZeroForOne[msg.sender], _liquidity), epochInfo.liquidityMapZeroForOne[msg.sender]);
+            epochInfo.liquidityMapOneForZero[msg.sender] = FHE.select(_zeroForOne, epochInfo.liquidityMapOneForZero[msg.sender], FHE.add(epochInfo.liquidityMapOneForZero[msg.sender], _liquidity));
         }
 
         euint128 token0Amount = FHE.select(_zeroForOne, _liquidity, ZERO);
@@ -312,16 +316,14 @@ contract Iceberg is BaseHook {
     }
 
     function _decryptEpoch(PoolKey calldata key, int24 lower, bool zeroForOne) internal {
-        //TODO improve how these mapping values are stored
-        euint32 encLower = FHE.asEuint32(uint32(int32(lower)));
-        ebool encZeroForOne = FHE.asEbool(zeroForOne);
-
-        Epoch epoch = getEncEpoch(key, encLower, encZeroForOne);
+        Epoch epoch = getEncEpoch(key, lower);
         EncEpochInfo storage encEpoch = encEpochInfos[epoch];
+
+        ebool _zeroForOne = FHE.asEbool(zeroForOne);
 
         // if order exists at current price level e.g. epoch exists
         if (!epoch.equals(EPOCH_DEFAULT)) {
-            euint128 liquidityTotal = encEpoch.liquidityTotal;
+            euint128 liquidityTotal = FHE.select(_zeroForOne, encEpoch.liquidityZeroForOne, encEpoch.liquidityOneForZero);
 
             //request unwrap of order amount from coprocessor
             address token = zeroForOne ? address(Currency.unwrap(key.currency0)) : address(Currency.unwrap(key.currency1));
@@ -372,5 +374,4 @@ contract Iceberg is BaseHook {
     function getTokenId(PoolKey calldata key, uint32 tickLower, bool zeroForOne) private pure returns(bytes32) {
         return keccak256(abi.encodePacked(key.toId(), tickLower, zeroForOne));
     }
-
 }
