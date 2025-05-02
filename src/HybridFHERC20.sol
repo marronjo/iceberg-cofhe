@@ -84,6 +84,14 @@ contract HybridFHERC20 is ERC20, IFHERC20 {
     }
 
     // ----------- Encrypted Transfer Functions ---------------
+    function transferEncrypted(address to, InEuint128 memory amount) external returns(euint128) {
+        return _transferImpl(msg.sender, to, FHE.asEuint128(amount));
+    }
+
+    function transferEncrypted(address to, euint128 amount) external returns(euint128) {
+        return _transferImpl(msg.sender, to, amount);
+    }
+
     function transferFromEncrypted(address from, address to, InEuint128 memory amount) external returns(euint128) {
         return _transferImpl(from, to, FHE.asEuint128(amount));
     }
