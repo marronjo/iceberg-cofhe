@@ -250,7 +250,8 @@ contract IcebergTest is Test, Fixtures {
             Currency curr0, 
             Currency curr1,
             euint128 liqZero,
-            euint128 liqOne
+            euint128 liqOne,
+            euint128 liqTotal
         ) = hook.encEpochInfos(epoch);
 
         assertFalse(filled);
@@ -258,6 +259,7 @@ contract IcebergTest is Test, Fixtures {
         assertEq(Currency.unwrap(curr1), Currency.unwrap(key.currency1));
         CFT.assertHashValue(liqZero, 1000000);            //zeroForOne liquidity should be 1000000 from iceberg order above
         CFT.assertHashValue(liqOne, 0);                   //oneForZero liquidity should be 0
+        CFT.assertHashValue(liqTotal, 1000000);           //total should be 1000000 since no other orders
 
         Queue queue = hook.poolQueue(keccak256(abi.encode(key)));
         assertFalse(queue.isEmpty());
@@ -298,14 +300,16 @@ contract IcebergTest is Test, Fixtures {
             Currency curr0, 
             Currency curr1,
             euint128 liqZero,
-            euint128 liqOne
+            euint128 liqOne,
+            euint128 liqTotal
         ) = hook.encEpochInfos(epoch);
 
         assertFalse(filled);
         assertEq(Currency.unwrap(curr0), Currency.unwrap(key.currency0));
         assertEq(Currency.unwrap(curr1), Currency.unwrap(key.currency1));
-        CFT.assertHashValue(liqZero, 0);            //zeroForOne liquidity should be 0
-        CFT.assertHashValue(liqOne, 987654321);     //oneForZero liquidity should be 987654321 from iceberg order above
+        CFT.assertHashValue(liqZero, 0);                  //zeroForOne liquidity should be 0
+        CFT.assertHashValue(liqOne, 987654321);           //oneForZero liquidity should be 987654321 from iceberg order above
+        CFT.assertHashValue(liqTotal, 987654321);         //total should be 987654321 since no other orders
 
         Queue queue = hook.poolQueue(keccak256(abi.encode(key)));
         assertFalse(queue.isEmpty());
