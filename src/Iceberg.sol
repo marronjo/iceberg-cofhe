@@ -57,6 +57,7 @@ contract Iceberg is BaseHook {
     using CurrencyLibrary for Currency;
     using CurrencySettler for Currency;
     using StateLibrary for IPoolManager;
+    using FHE for uint256;
 
     bytes internal constant ZERO_BYTES = bytes("");
 
@@ -76,10 +77,12 @@ contract Iceberg is BaseHook {
         bool filled;
         Currency currency0;
         Currency currency1;
-        euint128 liquidityZeroForOne;
-        euint128 liquidityOneForZero;
-        mapping(address => euint128) liquidityMapZeroForOne;
-        mapping(address => euint128) liquidityMapOneForZero;
+        euint128 liquidityToken0;
+        euint128 liquidityToken1;
+        euint128 liquidityTotal;
+        //mappings used to cancel user orders
+        mapping(address => euint128) liquidityMapToken0;  
+        mapping(address => euint128) liquidityMapToken1;
     }
 
     //TODO Decrypted Epoch
@@ -213,18 +216,20 @@ contract Iceberg is BaseHook {
                 amount1 = uint128(-delta.amount1());
             }
 
+            //TODO update output amounts in epoch struct
+
             // settle with pool manager the unencrypted FHERC20 tokens
             // send in tokens owed to pool and take tokens owed to the hook
             if (delta.amount0() < 0) {
                 key.currency0.settle(poolManager, address(this), uint256(amount0), false);
                 key.currency1.take(poolManager, address(this), uint256(amount1), false);
 
-                //IFHERC20(Currency.unwrap(key.currency1)).wrap(amount1); //encrypted wrap newly received (taken) token1
+                IFHERC20(Currency.unwrap(key.currency1)).wrap(address(this), amount1); //encrypted wrap newly received (taken) token1
             } else {
                 key.currency1.settle(poolManager, address(this), uint256(amount1), false);
                 key.currency0.take(poolManager, address(this), uint256(amount0), false);
 
-                //IFHERC20(Currency.unwrap(key.currency0)).wrap(amount0); //encrypted wrap newly received (taken) token0
+                IFHERC20(Currency.unwrap(key.currency0)).wrap(address(this), amount0); //encrypted wrap newly received (taken) token0
             }
 
             //TODO set epoch to filled
@@ -236,22 +241,9 @@ contract Iceberg is BaseHook {
 
     function placeIcebergOrder(PoolKey calldata key, int24 tickLower, InEbool calldata zeroForOne, InEuint128 calldata liquidity)
         external
-        //onlyValidPools(key.hooks)
     {
         euint128 _liquidity = FHE.asEuint128(liquidity);
-
-        //FHE Require, liquidity must be > 0
-        //FHE.req(FHE.gt(_liquidity, FHE.asEuint128(0)));
-
         ebool _zeroForOne = FHE.asEbool(zeroForOne);
-
-        //generate unique tokenId based on inputs
-        //bytes32 tokenId = getTokenId(key, _tickLower, _zeroForOne);
-
-        //mint FHERC6909 tokens to user as receipt of order
-        //with calculated tokenId and encrypted amount
-        //TODO _mintEnc(msg.sender, tokenId, _liquidity);
-        //totalSupply[tokenId] = FHE.add(totalSupply[tokenId], _liquidity);
 
         EncEpochInfo storage epochInfo;
         Epoch epoch = getEncEpoch(key, tickLower);
@@ -269,11 +261,13 @@ contract Iceberg is BaseHook {
         }
 
         unchecked {
-            epochInfo.liquidityZeroForOne = FHE.select(_zeroForOne, FHE.add(epochInfo.liquidityZeroForOne, _liquidity), epochInfo.liquidityZeroForOne);
-            epochInfo.liquidityOneForZero = FHE.select(_zeroForOne, epochInfo.liquidityOneForZero, FHE.add(epochInfo.liquidityOneForZero, _liquidity));
+            epochInfo.liquidityToken0 = FHE.select(_zeroForOne, FHE.add(epochInfo.liquidityToken0, _liquidity), epochInfo.liquidityToken0);
+            epochInfo.liquidityToken1 = FHE.select(_zeroForOne, epochInfo.liquidityToken1, FHE.add(epochInfo.liquidityToken1, _liquidity));
 
-            epochInfo.liquidityMapZeroForOne[msg.sender] = FHE.select(_zeroForOne, FHE.add(epochInfo.liquidityMapZeroForOne[msg.sender], _liquidity), epochInfo.liquidityMapZeroForOne[msg.sender]);
-            epochInfo.liquidityMapOneForZero[msg.sender] = FHE.select(_zeroForOne, epochInfo.liquidityMapOneForZero[msg.sender], FHE.add(epochInfo.liquidityMapOneForZero[msg.sender], _liquidity));
+            epochInfo.liquidityMapToken0[msg.sender] = FHE.select(_zeroForOne, FHE.add(epochInfo.liquidityMapToken0[msg.sender], _liquidity), epochInfo.liquidityMapToken0[msg.sender]);
+            epochInfo.liquidityMapToken1[msg.sender] = FHE.select(_zeroForOne, epochInfo.liquidityMapToken1[msg.sender], FHE.add(epochInfo.liquidityMapToken1[msg.sender], _liquidity));
+
+            epochInfo.liquidityTotal = FHE.add(epochInfo.liquidityTotal, _liquidity);
         }
 
         euint128 token0Amount = FHE.select(_zeroForOne, _liquidity, ZERO);
@@ -325,7 +319,7 @@ contract Iceberg is BaseHook {
 
         // if order exists at current price level e.g. epoch exists
         if (!epoch.equals(EPOCH_DEFAULT)) {
-            euint128 liquidityTotal = FHE.select(_zeroForOne, encEpoch.liquidityZeroForOne, encEpoch.liquidityOneForZero);
+            euint128 liquidityTotal = FHE.select(_zeroForOne, encEpoch.liquidityToken0, encEpoch.liquidityToken1);
 
             //request unwrap of order amount from coprocessor
             address token = zeroForOne ? address(Currency.unwrap(key.currency0)) : address(Currency.unwrap(key.currency1));
@@ -342,6 +336,39 @@ contract Iceberg is BaseHook {
             //used to query in beforeSwap hook
             orderInfo[liquidityTotal] = DecryptedOrder(zeroForOne, lower, token);
         }
+    }
+
+    function withdraw(PoolKey calldata key, int24 tickLower) external {
+        Epoch epoch = getEncEpoch(key, tickLower);
+        EncEpochInfo storage epochInfo = encEpochInfos[epoch];
+
+        if (!epochInfo.filled) revert NotFilled();
+
+        euint128 liquidityZero = epochInfo.liquidityMapToken0[msg.sender];
+        euint128 liquidityOne = epochInfo.liquidityMapToken1[msg.sender];
+
+        // delete epochInfo.liquidityMapToken0[msg.sender];
+        // delete epochInfo.liquidityMapToken1[msg.sender];
+
+        euint128 liquidityTotal = epochInfo.liquidityTotal;
+
+        euint128 amount0 = _mulDiv(epochInfo.liquidityToken0, liquidityZero, liquidityTotal);
+        euint128 amount1 = _mulDiv(epochInfo.liquidityToken1, liquidityOne, liquidityTotal);
+
+        epochInfo.liquidityToken0 = epochInfo.liquidityToken0.sub(amount0);
+        epochInfo.liquidityToken1 = epochInfo.liquidityToken1.sub(amount1);
+    
+        epochInfo.liquidityTotal = epochInfo.liquidityToken1.sub(liquidityZero).sub(liquidityOne);
+
+        FHE.allow(amount0, Currency.unwrap(key.currency0));
+        FHE.allow(amount1, Currency.unwrap(key.currency1));
+
+        IFHERC20(Currency.unwrap(key.currency0)).transferFromEncrypted(address(this), msg.sender, amount0);
+        IFHERC20(Currency.unwrap(key.currency1)).transferFromEncrypted(address(this), msg.sender, amount1);
+    }
+
+    function _mulDiv(euint128 a, euint128 b, euint128 c) private returns(euint128) {
+        return FHE.div(FHE.mul(a, b), c);
     }
 
     function _swapPoolManager(PoolKey calldata key, bool zeroForOne, int256 amountSpecified) private returns(BalanceDelta delta) {
