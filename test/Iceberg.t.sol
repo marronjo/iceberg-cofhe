@@ -127,7 +127,171 @@ contract IcebergTest is Test, Fixtures {
         fheToken0.approve(address(manager), type(uint256).max);
         fheToken1.approve(address(manager), type(uint256).max);
 
+        fheToken0.mintEncrypted(address(hook), FHE.asEuint128(0));  //init value in mock storage
+        fheToken1.mintEncrypted(address(hook), FHE.asEuint128(0));  //init value in mock storage
+
         vm.stopPrank();
+    }
+
+    function testBeforeSwapHookIcebergOrderFilled() public {
+
+        //-----------------------------------------------
+        //                                              
+        //          STAGE 1 - Place Iceberg Order
+        //          
+        //    zeroForOne - true (sell token0 buy token1)  
+        //          ticklower - 0 set at middle tick
+        //          liquidity - 1000000 quantity
+        //                                              
+        //-----------------------------------------------
+
+        int24 lower = 0;
+        InEbool memory zeroForOne = CFT.createInEbool(true, user);
+        InEuint128 memory liquidity = CFT.createInEuint128(1000000, user);
+
+        euint128 userBalanceBeforeToken0 = fheToken0.encBalances(user);
+        euint128 userBalanceBeforeToken1 = fheToken1.encBalances(user);
+
+        euint128 hookBalanceBeforeToken0 = fheToken0.encBalances(address(hook));
+        euint128 hookBalanceBeforeToken1 = fheToken1.encBalances(address(hook));
+
+        // user places limit order at given tick lower
+        vm.prank(user);
+        hook.placeIcebergOrder(key, lower, zeroForOne, liquidity);
+
+        euint128 userBalanceAfterToken0 = fheToken0.encBalances(user);
+        euint128 userBalanceAfterToken1 = fheToken1.encBalances(user);
+
+        euint128 hookBalanceAfterToken0 = fheToken0.encBalances(address(hook));
+        euint128 hookBalanceAfterToken1 = fheToken1.encBalances(address(hook));
+
+        // user balance assertions
+        // user should send 1000000 token0
+        // token1 balance should be the same as before
+        CFT.assertHashValue(userBalanceBeforeToken0, _mockStorageHelper(userBalanceAfterToken0) + 1000000);
+        CFT.assertHashValue(userBalanceBeforeToken1, _mockStorageHelper(userBalanceAfterToken1));
+
+        // hook balance assertions
+        // hook should receive 1000000 token0
+        // token1 balance should be the same as before
+        CFT.assertHashValue(hookBalanceBeforeToken0, _mockStorageHelper(hookBalanceAfterToken0) - 1000000);
+        CFT.assertHashValue(hookBalanceBeforeToken1, _mockStorageHelper(hookBalanceAfterToken1));
+
+        //-----------------------------------------------
+        //                                              
+        //            STAGE 2 - Execute swap
+        //     zeroForOne - false (opposite to iceberg)
+        //    amount - 1e18 large enough to cross 0 tick
+        //    price limit - tickPrice @ 60 (spacing + 1)
+        //
+        //    validate correct order data is stored
+        //                                              
+        //-----------------------------------------------
+
+        doSwap(false, -1e18, 60);
+
+        Epoch epoch = hook.getEncEpoch(key, lower);
+
+        assertTrue(EpochLibrary.equals(epoch, Epoch.wrap(1)));
+
+        (
+            bool filled, 
+            Currency curr0, 
+            Currency curr1,
+            euint128 liqZero,
+            euint128 liqOne,
+            euint128 liqTotal
+        ) = hook.encEpochInfos(epoch);
+
+        assertFalse(filled);
+        assertEq(Currency.unwrap(curr0), Currency.unwrap(key.currency0));
+        assertEq(Currency.unwrap(curr1), Currency.unwrap(key.currency1));
+        CFT.assertHashValue(liqZero, 1000000);            //zeroForOne liquidity should be 1000000 from iceberg order above
+        CFT.assertHashValue(liqOne, 0);                   //oneForZero liquidity should be 0
+        CFT.assertHashValue(liqTotal, 1000000);           //total should be 1000000 since no other orders
+
+        //-----------------------------------------------
+        //                                              
+        //      STAGE 3 - Decryption Queue Validation
+        //          
+        //      ensure decryption request was sent to
+        //      coprocessor and the encrypted value exists
+        //              in the decryption queue.  
+        //                                              
+        //-----------------------------------------------
+
+        Queue queue = hook.poolQueue(keccak256(abi.encode(key)));
+        assertFalse(queue.isEmpty());       //ensure order is in the decryption queue
+
+        //look at value at top of queue
+        euint128 top = queue.peek();
+
+        CFT.assertHashValue(top, 1000000);
+
+        (
+            bool orderZeroForOne,
+            int24 orderTickLower,
+            address orderToken
+        ) = hook.orderInfo(top);
+
+        assertEq(orderZeroForOne, true);
+        assertEq(orderTickLower, 0);
+        assertEq(orderToken, Currency.unwrap(key.currency0));
+
+        //-----------------------------------------------
+        //                                              
+        //      STAGE 4 - Simulate Async Decryption
+        //          
+        //        decryption happens randomly between
+        //      1-10 block timestamps in mock environment
+        //      warp timestamp by 11 to ensure decrypted
+        //                  value is ready
+        //                                              
+        //-----------------------------------------------
+        
+        vm.warp(block.timestamp + 11);
+
+        //-----------------------------------------------
+        //                                              
+        //     STAGE 5 - Test BeforeSwap Order Fill
+        //          
+        //   the order is now decrypted and waiting to fill.
+        //      
+        //  execute another swap, so the beforeSwap is called
+        //  then the decrypted iceberg order should be filled
+        //         before the new swap completes.
+        //                                              
+        //-----------------------------------------------
+
+        euint128 hookBalanceBeforeFillToken0 = fheToken0.encBalances(address(hook));
+        euint128 hookBalanceBeforeFillToken1 = fheToken1.encBalances(address(hook));
+
+        doSwap(true, -1);
+
+        //-----------------------------------------------
+        //                                              
+        //     STAGE 6 - Validate order filled correctly
+        //          
+        //       check hook balances before / after
+        //          for correct tokens in / out
+        //                                              
+        //-----------------------------------------------
+
+        euint128 hookBalanceAfterFillToken0 = fheToken0.encBalances(address(hook));
+        euint128 hookBalanceAfterFillToken1 = fheToken1.encBalances(address(hook));
+
+        assertEqEuint(hookBalanceBeforeFillToken0, hookBalanceAfterFillToken0, 1000000);
+        assertEqEuintNormalise(hookBalanceBeforeFillToken1, int128(1000000), hookBalanceAfterFillToken1, 1000000);
+
+        //-----------------------------------------------
+        //                                              
+        //     STAGE 7 - Ensure Withdrawal works
+        //          
+        //      make sure user can withdraw funds
+        //                                              
+        //-----------------------------------------------
+
+        // TODO
     }
 
     // tick lower should be 0 since pool was initialized with 1-1 SQRT Price
@@ -404,5 +568,50 @@ contract IcebergTest is Test, Fixtures {
 
     function _defaultTestSettings() internal pure returns (PoolSwapTest.TestSettings memory testSetting) {
         return PoolSwapTest.TestSettings({takeClaims: true, settleUsingBurn: false});
+    }
+
+    // help with easier to read test assertions
+    function _mockStorageHelper(euint128 value) private view returns(uint128){
+        return uint128(CFT.mockStorage(euint128.unwrap(value)));
+    }
+
+    // fetch evalues from mock storage and compare plaintext
+    function assertEqEuint(euint128 a, euint128 b) private view {
+        assertEq(_mockStorageHelper(a), _mockStorageHelper(b));
+    }
+
+    // fetch evalues from mock storage and compare plaintext
+    // int value can be +/- to allow for add/sub operations
+    function assertEqEuint(euint128 a, int128 aOffset, euint128 b) private view {
+        int128 aAfterOffset = int128(_mockStorageHelper(a)) + aOffset;  //assume no underflow
+        assertEq(uint128(aAfterOffset), _mockStorageHelper(b));
+    }
+
+    // fetch evalues from mock storage and compare plaintext
+    function assertEqEuint(euint128 a, euint128 b, int128 bOffset) private view {
+        int128 bAfterOffset = int128(_mockStorageHelper(b)) + bOffset;  //assume no underflow
+        assertEq(_mockStorageHelper(a), uint128(bAfterOffset));
+    }
+
+    // fetch evalues from mock storage and compare plaintext with normalise
+    function assertEqEuintNormalise(euint128 a, uint128 aAmount, euint128 b) private view {
+        assertEq((_mockStorageHelper(a) / aAmount) * aAmount, _mockStorageHelper(b));
+    }
+
+    // fetch evalues from mock storage and compare plaintext with normalise
+    function assertEqEuintNormalise(euint128 a, euint128 b, uint128 bAmount) private view {
+        assertEq(_mockStorageHelper(a), (_mockStorageHelper(b) / bAmount) * bAmount);
+    }
+
+    // fetch evalues from mock storage and compare plaintext with normalise
+    function assertEqEuintNormalise(euint128 a, uint128 aAmount, euint128 b, int128 bOffset) private view {
+        int128 bAfterOffset = int128(_mockStorageHelper(b)) + bOffset;  //assume no underflow
+        assertEq((_mockStorageHelper(a) / aAmount) * aAmount, uint128(bAfterOffset));
+    }
+
+    // fetch evalues from mock storage and compare plaintext with normalise
+    function assertEqEuintNormalise(euint128 a, int128 aOffset, euint128 b, uint128 bAmount) private view {
+        int128 aAfterOffset = int128(_mockStorageHelper(a)) + aOffset;  //assume no underflow
+        assertEq(uint128(aAfterOffset), (_mockStorageHelper(b) / bAmount) * bAmount);
     }
 }
