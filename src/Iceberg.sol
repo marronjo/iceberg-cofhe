@@ -325,16 +325,16 @@ contract Iceberg is BaseHook {
             address token = zeroForOne ? address(Currency.unwrap(key.currency0)) : address(Currency.unwrap(key.currency1));
 
             FHE.allow(liquidityTotal, token);
-            IFHERC20(token).requestUnwrap(address(this), liquidityTotal);
+            euint128 liquidityHandle = IFHERC20(token).requestUnwrap(address(this), liquidityTotal);
 
             //add order key to decryption queue
             //to be queried in beforeSwap hook before next swap takes place
             Queue queue = getPoolQueue(key);
-            queue.push(liquidityTotal);
+            queue.push(liquidityHandle);
 
             //add order details to mapping
             //used to query in beforeSwap hook
-            orderInfo[liquidityTotal] = DecryptedOrder(zeroForOne, lower, token);
+            orderInfo[liquidityHandle] = DecryptedOrder(zeroForOne, lower, token);
         }
     }
 
