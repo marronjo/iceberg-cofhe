@@ -182,7 +182,7 @@ contract IcebergTest is Test, Fixtures {
         //            STAGE 2 - Execute swap
         //     zeroForOne - false (opposite to iceberg)
         //    amount - 1e18 large enough to cross 0 tick
-        //    price limit - tickPrice @ 60 (spacing + 1)
+        //    price limit - tickPrice @ 60
         //
         //    validate correct order data is stored
         //                                              
@@ -195,20 +195,21 @@ contract IcebergTest is Test, Fixtures {
         assertTrue(EpochLibrary.equals(epoch, Epoch.wrap(1)));
 
         (
-            bool filled, 
-            Currency curr0, 
+            bool fill0,
+            ,
+            Currency curr0,
             Currency curr1,
-            euint128 liqZero,
-            euint128 liqOne,
-            euint128 liqTotal
+            ,,,,
+            euint128 zeroForOneTotal,
+            euint128 oneForZeroTotal
         ) = hook.encEpochInfos(epoch);
 
-        assertFalse(filled);
+        assertFalse(fill0);
         assertEq(Currency.unwrap(curr0), Currency.unwrap(key.currency0));
         assertEq(Currency.unwrap(curr1), Currency.unwrap(key.currency1));
-        CFT.assertHashValue(liqZero, 1000000);            //zeroForOne liquidity should be 1000000 from iceberg order above
-        CFT.assertHashValue(liqOne, 0);                   //oneForZero liquidity should be 0
-        CFT.assertHashValue(liqTotal, 1000000);           //total should be 1000000 since no other orders
+        CFT.assertHashValue(zeroForOneTotal, 1000000);                              //zeroForOne liquidity should be 1000000 from iceberg order above
+        CFT.assertHashValue(oneForZeroTotal, 0);                                    //oneForZero liquidity should be 0
+        CFT.assertHashValue(hook.getUserLiquidity(key, user, 0, true), 1000000);    //user total should be 1000000 since no other orders
 
         //-----------------------------------------------
         //                                              
@@ -288,10 +289,41 @@ contract IcebergTest is Test, Fixtures {
         //     STAGE 7 - Ensure Withdrawal works
         //          
         //      make sure user can withdraw funds
+        //  validate balance change of correct tokens
         //                                              
         //-----------------------------------------------
 
-        // TODO
+        euint128 userBalanceBeforeWithdrawToken0 = fheToken0.encBalances(user);
+        euint128 userBalanceBeforeWithdrawToken1 = fheToken1.encBalances(user);
+
+        euint128 userLiquidity0 = hook.getUserLiquidity(key, user, 0, true);
+        euint128 userLiquidity1 = hook.getUserLiquidity(key, user, 0, false);
+
+        euint128 hookBalanceBeforeWithdrawToken0 = fheToken0.encBalances(address(hook));
+        euint128 hookBalanceBeforeWithdrawToken1 = fheToken1.encBalances(address(hook));
+
+        // uint128 l0 = _mockStorageHelper(userBalanceBeforeWithdrawToken0);
+        // uint128 l1 = _mockStorageHelper(userBalanceBeforeWithdrawToken1);
+        // uint128 lu0 = _mockStorageHelper(userLiquidity0);
+        // uint128 lu1 = _mockStorageHelper(userLiquidity1);
+
+        vm.prank(user);
+        (euint128 amount0, euint128 amount1) = hook.withdraw(key, 0);
+
+        uint128 a0 = _mockStorageHelper(amount0);
+        uint128 a1 = _mockStorageHelper(amount1);
+
+        euint128 userBalanceAfterWithdrawToken0 = fheToken0.encBalances(user);
+        euint128 userBalanceAfterWithdrawToken1 = fheToken1.encBalances(user);
+
+        euint128 hookBalanceAfterWithdrawToken0 = fheToken0.encBalances(address(hook));
+        euint128 hookBalanceAfterWithdrawToken1 = fheToken1.encBalances(address(hook));
+
+        assertGteEuint(hookBalanceBeforeWithdrawToken1, amount1);   //ensure hook has enough balance to withdraw correct amount
+        //assertLtEuint(hookBalanceAfterWithdrawToken1, amount1);
+
+        //assertEqEuint(userBalanceBeforeWithdrawToken0, userBalanceAfterWithdrawToken0); //no change in token0 balance
+        //assertLtEuint(userBalanceBeforeWithdrawToken1, userBalanceAfterWithdrawToken1); //balance before should be less than after e.g gain token1
     }
 
     // tick lower should be 0 since pool was initialized with 1-1 SQRT Price
@@ -410,20 +442,22 @@ contract IcebergTest is Test, Fixtures {
         assertTrue(EpochLibrary.equals(epoch, Epoch.wrap(1)));
 
         (
-            bool filled, 
-            Currency curr0, 
+            bool fill0,
+            bool fill1,
+            Currency curr0,
             Currency curr1,
-            euint128 liqZero,
-            euint128 liqOne,
-            euint128 liqTotal
+            ,,,,
+            euint128 zeroForOneTotal,
+            euint128 oneForZeroTotal
         ) = hook.encEpochInfos(epoch);
 
-        assertFalse(filled);
+        assertFalse(fill0);
+        assertFalse(fill1);
         assertEq(Currency.unwrap(curr0), Currency.unwrap(key.currency0));
         assertEq(Currency.unwrap(curr1), Currency.unwrap(key.currency1));
-        CFT.assertHashValue(liqZero, 1000000);            //zeroForOne liquidity should be 1000000 from iceberg order above
-        CFT.assertHashValue(liqOne, 0);                   //oneForZero liquidity should be 0
-        CFT.assertHashValue(liqTotal, 1000000);           //total should be 1000000 since no other orders
+        CFT.assertHashValue(zeroForOneTotal, 1000000);                                     //zeroForOne liquidity should be 1000000 from iceberg order above
+        CFT.assertHashValue(oneForZeroTotal, 0);                                           //oneForZero liquidity should be 0
+        CFT.assertHashValue(hook.getUserLiquidity(key, user, 0, true), 1000000);           //total should be 1000000 since no other orders
 
         Queue queue = hook.poolQueue(keccak256(abi.encode(key)));
         assertFalse(queue.isEmpty());
@@ -460,20 +494,21 @@ contract IcebergTest is Test, Fixtures {
         assertTrue(EpochLibrary.equals(epoch, Epoch.wrap(1)));
 
         (
-            bool filled, 
-            Currency curr0, 
+            ,
+            bool fill1,
+            Currency curr0,
             Currency curr1,
-            euint128 liqZero,
-            euint128 liqOne,
-            euint128 liqTotal
+            ,,,,
+            euint128 zeroForOneTotal,
+            euint128 oneForZeroTotal
         ) = hook.encEpochInfos(epoch);
 
-        assertFalse(filled);
+        assertFalse(fill1);
         assertEq(Currency.unwrap(curr0), Currency.unwrap(key.currency0));
         assertEq(Currency.unwrap(curr1), Currency.unwrap(key.currency1));
-        CFT.assertHashValue(liqZero, 0);                  //zeroForOne liquidity should be 0
-        CFT.assertHashValue(liqOne, 987654321);           //oneForZero liquidity should be 987654321 from iceberg order above
-        CFT.assertHashValue(liqTotal, 987654321);         //total should be 987654321 since no other orders
+        CFT.assertHashValue(zeroForOneTotal, 0);                  //zeroForOne liquidity should be 0
+        CFT.assertHashValue(oneForZeroTotal, 987654321);           //oneForZero liquidity should be 987654321 from iceberg order above
+        CFT.assertHashValue(hook.getUserLiquidity(key, user, 0, false), 987654321);         //total should be 987654321 since no other orders
 
         Queue queue = hook.poolQueue(keccak256(abi.encode(key)));
         assertFalse(queue.isEmpty());
@@ -591,6 +626,22 @@ contract IcebergTest is Test, Fixtures {
     function assertEqEuint(euint128 a, euint128 b, int128 bOffset) private view {
         int128 bAfterOffset = int128(_mockStorageHelper(b)) + bOffset;  //assume no underflow
         assertEq(_mockStorageHelper(a), uint128(bAfterOffset));
+    }
+
+    function assertLtEuint(euint128 a, euint128 b) private view {
+        assertTrue(_mockStorageHelper(a) < _mockStorageHelper(b));
+    }
+
+    function assertLteEuint(euint128 a, euint128 b) private view {
+        assertTrue(_mockStorageHelper(a) <= _mockStorageHelper(b));
+    }
+
+    function assertGtEuint(euint128 a, euint128 b) private view {
+        assertTrue(_mockStorageHelper(a) > _mockStorageHelper(b));
+    }
+
+    function assertGteEuint(euint128 a, euint128 b) private view {
+        assertTrue(_mockStorageHelper(a) >= _mockStorageHelper(b));
     }
 
     // fetch evalues from mock storage and compare plaintext with normalise
