@@ -147,10 +147,6 @@ contract Iceberg is BaseHook {
         return compressed * tickSpacing;
     }
 
-    function _getTokenFromPoolKey(PoolKey calldata poolKey, bool zeroForOne) private pure returns(address token){
-        token = zeroForOne ? Currency.unwrap(poolKey.currency0) : Currency.unwrap(poolKey.currency1);
-    }
-
     //if queue does not exist for given pool, deploy new queue
     function getPoolQueue(PoolKey calldata key) private returns(Queue queue){
         bytes32 poolKey = keccak256(abi.encode(key));
@@ -192,14 +188,15 @@ contract Iceberg is BaseHook {
             if(!decrypted){
                 return (BaseHook.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, 0);
             }
+
+            Epoch epoch = getEncEpoch(key, order.tickLower);
+            EncEpochInfo storage epochInfo = encEpochInfos[epoch];
             
             //value is decrypted
             //pop from queue since it is no longer needed
             queue.pop();
 
             BalanceDelta delta = _swapPoolManager(key, order.zeroForOne, -int256(uint256(decryptedLiquidity))); 
-
-            //TODO add values to decrypted Epoch  
 
             uint128 amount0;
             uint128 amount1;
@@ -227,8 +224,8 @@ contract Iceberg is BaseHook {
 
                 IFHERC20(Currency.unwrap(key.currency0)).wrap(address(this), amount0); //encrypted wrap newly received (taken) token0
             }
-
-            //TODO set epoch to filled
+            
+            epochInfo.filled = true;
         }
 
         return (BaseHook.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, 0);   //TODO edit beforeSwapDelta to reflect swap
@@ -394,9 +391,5 @@ contract Iceberg is BaseHook {
             lower = tickLowerLast;
             upper = tickLower - tickSpacing;
         }
-    }
-
-    function getTokenId(PoolKey calldata key, uint32 tickLower, bool zeroForOne) private pure returns(bytes32) {
-        return keccak256(abi.encodePacked(key.toId(), tickLower, zeroForOne));
     }
 }
