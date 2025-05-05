@@ -31,10 +31,6 @@ import {
     } from "@fhenixprotocol/cofhe-contracts/FHE.sol";
 
 import {IFHERC20} from "./interface/IFHERC20.sol";
-
-import {console2} from "forge-std/Test.sol";
-import {console} from "forge-std/console.sol";
-
 import {Queue} from "./Queue.sol";
 
 contract Iceberg is BaseHook {
