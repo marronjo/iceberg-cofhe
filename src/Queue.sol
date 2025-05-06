@@ -9,7 +9,7 @@ contract Queue {
     DoubleEndedQueue.Bytes32Deque private queue;
 
     function push(euint128 handle) external {
-        DoubleEndedQueue.pushFront(queue, euintToBytes32(handle));
+        DoubleEndedQueue.pushBack(queue, euintToBytes32(handle));
     }
 
     function pop() external returns(euint128) {
