@@ -45,6 +45,7 @@ contract IcebergTest is Test, Fixtures {
     CoFheTest CFT;
 
     address private user = makeAddr("user");
+    address private user2 = makeAddr("user2");
 
     Iceberg hook;
     PoolId poolId;
@@ -138,6 +139,13 @@ contract IcebergTest is Test, Fixtures {
         fheToken0.mintEncrypted(address(hook), FHE.asEuint128(0));  //init value in mock storage
         fheToken1.mintEncrypted(address(hook), FHE.asEuint128(0));  //init value in mock storage
 
+        vm.stopPrank();
+
+        vm.startPrank(user2);
+        InEuint128 memory amountUser2 = CFT.createInEuint128(2 ** 120, user2);
+
+        fheToken0.mintEncrypted(user2, amountUser2);
+        fheToken1.mintEncrypted(user2, amountUser2);
         vm.stopPrank();
     }
 
@@ -503,6 +511,197 @@ contract IcebergTest is Test, Fixtures {
 
         assertGtEuint(hookBalanceBeforeWithdrawToken0, hookBalanceAfterWithdrawToken0);             //lose token0
         assertEqEuint(hookBalanceBeforeWithdrawToken1, hookBalanceAfterWithdrawToken1);             //no change
+    }
+
+    function test2IcebergOrdersFilledSameEpoch() public {
+        int24 lower = 0;
+        InEbool memory zeroForOne = CFT.createInEbool(true, user);
+        InEuint128 memory liquidity1 = CFT.createInEuint128(1000000, user);
+
+        InEbool memory zeroForOne2 = CFT.createInEbool(true, user2);
+        InEuint128 memory liquidity2 = CFT.createInEuint128(5000000, user2);
+
+        euint128 userBalanceBeforeToken0 = fheToken0.encBalances(user);
+        euint128 userBalanceBeforeToken1 = fheToken1.encBalances(user);
+
+        euint128 user2BalanceBeforeToken0 = fheToken0.encBalances(user2);
+        euint128 user2BalanceBeforeToken1 = fheToken1.encBalances(user2);
+
+        euint128 hookBalanceBeforeToken0 = fheToken0.encBalances(address(hook));
+        euint128 hookBalanceBeforeToken1 = fheToken1.encBalances(address(hook));
+
+        // user places limit order at given tick lower
+        vm.prank(user);
+        hook.placeIcebergOrder(key, lower, zeroForOne, liquidity1);
+
+        // user2 places limit order at same tick lower and trade direction
+        vm.prank(user2);
+        hook.placeIcebergOrder(key, lower, zeroForOne2, liquidity2);
+
+        euint128 userBalanceAfterToken0 = fheToken0.encBalances(user);
+        euint128 userBalanceAfterToken1 = fheToken1.encBalances(user);
+
+        euint128 user2BalanceAfterToken0 = fheToken0.encBalances(user2);
+        euint128 user2BalanceAfterToken1 = fheToken1.encBalances(user2);
+
+        euint128 hookBalanceAfterToken0 = fheToken0.encBalances(address(hook));
+        euint128 hookBalanceAfterToken1 = fheToken1.encBalances(address(hook));
+
+        // user balance assertions
+        // user should send 1000000 token0
+        // token1 balance should be the same as before
+        CFT.assertHashValue(userBalanceBeforeToken0, _mockStorageHelper(userBalanceAfterToken0) + 1000000);
+        CFT.assertHashValue(userBalanceBeforeToken1, _mockStorageHelper(userBalanceAfterToken1));
+
+        // user2 balance assertions
+        // user should send 5000000 token0
+        // token1 balance should be the same as before
+        CFT.assertHashValue(user2BalanceBeforeToken0, _mockStorageHelper(user2BalanceAfterToken0) + 5000000);
+        CFT.assertHashValue(user2BalanceBeforeToken1, _mockStorageHelper(user2BalanceAfterToken1));
+
+        // hook balance assertions
+        // hook should receive 6000000 token0
+        // token1 balance should be the same as before
+        CFT.assertHashValue(hookBalanceBeforeToken0, _mockStorageHelper(hookBalanceAfterToken0) - 6000000);
+        CFT.assertHashValue(hookBalanceBeforeToken1, _mockStorageHelper(hookBalanceAfterToken1));
+
+        //-----------------------------------------------
+        //                                              
+        //            STAGE 2 - Execute swap
+        //     zeroForOne - false (opposite to iceberg)
+        //    amount - 1e18 large enough to cross 0 tick
+        //    price limit - tickPrice @ 60
+        //
+        //    validate correct order data is stored
+        //                                              
+        //-----------------------------------------------
+
+        doSwap(false, -1e18, 60);
+
+        Epoch epoch = hook.getEncEpoch(key, lower);
+
+        assertTrue(EpochLibrary.equals(epoch, Epoch.wrap(1)));
+
+        (
+            bool fill0,
+            ,
+            Currency curr0,
+            Currency curr1,
+            ,,,,
+            euint128 zeroForOneTotal,
+            euint128 oneForZeroTotal
+        ) = hook.encEpochInfos(epoch);
+
+        assertFalse(fill0);
+        assertEq(Currency.unwrap(curr0), Currency.unwrap(key.currency0));
+        assertEq(Currency.unwrap(curr1), Currency.unwrap(key.currency1));
+        CFT.assertHashValue(zeroForOneTotal, 6000000);                              //zeroForOne liquidity should be 6000000 from iceberg order above
+        CFT.assertHashValue(oneForZeroTotal, 0);                                    //oneForZero liquidity should be 0
+        CFT.assertHashValue(hook.getUserLiquidity(key, user, 0, true), 1000000);    //user total should be 1000000
+        CFT.assertHashValue(hook.getUserLiquidity(key, user2, 0, true), 5000000);   //user2 total should be 5000000
+
+        //-----------------------------------------------
+        //                                              
+        //      STAGE 3 - Decryption Queue Validation
+        //          
+        //      ensure decryption request was sent to
+        //      coprocessor and the encrypted value exists
+        //              in the decryption queue.  
+        //                                              
+        //-----------------------------------------------
+
+        Queue queue = hook.poolQueue(keccak256(abi.encode(key)));
+        assertFalse(queue.isEmpty());       //ensure order is in the decryption queue
+
+        //look at value at top of queue
+        euint128 top = queue.peek();
+
+        CFT.assertHashValue(top, 6000000);  //6000000 liquidity at top of decryption queue
+
+        (
+            bool orderZeroForOne,
+            int24 orderTickLower,
+            address orderToken
+        ) = hook.orderInfo(top);
+
+        assertEq(orderZeroForOne, true);
+        assertEq(orderTickLower, 0);
+        assertEq(orderToken, Currency.unwrap(key.currency0));
+
+        //-----------------------------------------------
+        //                                              
+        //      STAGE 4 - Simulate Async Decryption
+        //          
+        //        decryption happens randomly between
+        //      1-10 block timestamps in mock environment
+        //      warp timestamp by 11 to ensure decrypted
+        //                  value is ready
+        //                                              
+        //-----------------------------------------------
+        
+        vm.warp(block.timestamp + 11);
+
+        //-----------------------------------------------
+        //                                              
+        //     STAGE 5 - Test BeforeSwap Order Fill
+        //          
+        //   the order is now decrypted and waiting to fill.
+        //      
+        //  execute another swap, so the beforeSwap is called
+        //  then the decrypted iceberg order should be filled
+        //         before the new swap completes.
+        //                                              
+        //-----------------------------------------------
+
+        euint128 hookBalanceBeforeFillToken0 = fheToken0.encBalances(address(hook));
+        euint128 hookBalanceBeforeFillToken1 = fheToken1.encBalances(address(hook));
+
+        doSwap(true, -1);
+
+        //-----------------------------------------------
+        //                                              
+        //     STAGE 6 - Validate order filled correctly
+        //          
+        //       check hook balances before / after
+        //          for correct tokens in / out
+        //                                              
+        //-----------------------------------------------
+
+        euint128 hookBalanceAfterFillToken0 = fheToken0.encBalances(address(hook));
+        euint128 hookBalanceAfterFillToken1 = fheToken1.encBalances(address(hook));
+
+        assertEqEuint(hookBalanceBeforeFillToken0, hookBalanceAfterFillToken0, 6000000);
+        assertEqEuintNormalise(hookBalanceBeforeFillToken1, int128(6000000), hookBalanceAfterFillToken1, 1000000);
+
+        //-----------------------------------------------
+        //                                              
+        //     STAGE 7 - Ensure Withdrawal works
+        //          
+        //      make sure user can withdraw funds
+        //  validate balance change of correct tokens
+        //                                              
+        //-----------------------------------------------
+
+        euint128 userBalanceBeforeWithdrawToken0 = fheToken0.encBalances(user);
+        euint128 userBalanceBeforeWithdrawToken1 = fheToken1.encBalances(user);
+
+        euint128 hookBalanceBeforeWithdrawToken0 = fheToken0.encBalances(address(hook));
+        euint128 hookBalanceBeforeWithdrawToken1 = fheToken1.encBalances(address(hook));
+
+        vm.prank(user);
+        (euint128 amount0, euint128 amount1) = hook.withdraw(key, 0);
+
+        euint128 userBalanceAfterWithdrawToken0 = fheToken0.encBalances(user);
+        euint128 userBalanceAfterWithdrawToken1 = fheToken1.encBalances(user);
+
+        euint128 hookBalanceAfterWithdrawToken0 = fheToken0.encBalances(address(hook));
+        euint128 hookBalanceAfterWithdrawToken1 = fheToken1.encBalances(address(hook));
+
+        assertEqEuint(userBalanceBeforeWithdrawToken0, userBalanceAfterWithdrawToken0);             //no change
+        assertLtEuint(userBalanceBeforeWithdrawToken1, userBalanceAfterWithdrawToken1);             //gain token1
+
+        assertEqEuint(hookBalanceBeforeWithdrawToken0, hookBalanceAfterWithdrawToken0);             //no change
+        assertGtEuint(hookBalanceBeforeWithdrawToken1, hookBalanceAfterWithdrawToken1);             //lose token1
     }
 
     //should revert since afterInitialize called by contract other than poolManager
