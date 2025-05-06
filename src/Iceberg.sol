@@ -58,6 +58,7 @@ contract Iceberg is BaseHook {
     bytes internal constant ZERO_BYTES = bytes("");
 
     euint128 private ZERO = FHE.asEuint128(0);
+    euint128 private ONE = FHE.asEuint128(1);
 
     Epoch private constant EPOCH_DEFAULT = Epoch.wrap(0);
 
@@ -105,6 +106,7 @@ contract Iceberg is BaseHook {
 
     constructor(IPoolManager _poolManager) BaseHook(_poolManager) {
         FHE.allowThis(ZERO);
+        FHE.allowThis(ONE);
     }
 
     function getHookPermissions() public pure override returns (Hooks.Permissions memory) {
@@ -178,6 +180,8 @@ contract Iceberg is BaseHook {
         return BaseHook.afterInitialize.selector;
     }
 
+    event DeltaAmounts(uint128 amountA, uint128 amountB);
+
     function _beforeSwap(
         address,
         PoolKey calldata key,
@@ -235,6 +239,8 @@ contract Iceberg is BaseHook {
 
                 IFHERC20(Currency.unwrap(key.currency0)).wrap(address(this), amount0); //encrypted wrap newly received (taken) token0
             }
+
+            emit DeltaAmounts(amount0, amount1);
             
             if(order.zeroForOne){
                 epochInfo.zeroForOnefilled = true;
@@ -349,7 +355,7 @@ contract Iceberg is BaseHook {
         }
     }
 
-    function withdraw(PoolKey calldata key, int24 tickLower) external returns(euint128, euint128){
+    function withdraw(PoolKey calldata key, int24 tickLower) external returns(euint128, euint128) {
         Epoch epoch = getEncEpoch(key, tickLower);
         EncEpochInfo storage epochInfo = encEpochInfos[epoch];
 
@@ -366,14 +372,11 @@ contract Iceberg is BaseHook {
         euint128 liquidityTotal0 = epochInfo.zeroForOneLiquidity;
         euint128 liquidityTotal1 = epochInfo.oneForZeroLiquidity;
 
-        euint128 amount0 = FHE.select(zeroForOne, _safeMulDiv(epochInfo.zeroForOneToken0, liquidityZero, liquidityTotal0), ZERO);
-        euint128 amount1 = FHE.select(zeroForOne, ZERO, _safeMulDiv(epochInfo.oneForZeroToken1, liquidityOne, liquidityTotal1));
+        euint128 amount0 = FHE.select(zeroForOne, ZERO, _safeMulDiv(epochInfo.oneForZeroToken0, liquidityOne, liquidityTotal1));
+        euint128 amount1 = FHE.select(zeroForOne, _safeMulDiv(epochInfo.zeroForOneToken1, liquidityZero, liquidityTotal0), ZERO);
 
-        //euint128 amount0 = FHE.select(liquidityZero.eq(ZERO), ZERO, calculateLargerTokenAmount(epochInfo.zeroForOneToken0, epochInfo.zeroForOneToken1, liquidityZero, liquidityTotal0));
-        //euint128 amount1 = FHE.select(liquidityOne.eq(ZERO), ZERO, calculateLargerTokenAmount(epochInfo.oneForZeroToken1, epochInfo.oneForZeroToken0, liquidityOne, liquidityTotal1));
-
-        epochInfo.zeroForOneToken0 = epochInfo.zeroForOneToken0.sub(amount0);
-        epochInfo.oneForZeroToken1 = epochInfo.oneForZeroToken1.sub(amount1);
+        epochInfo.oneForZeroToken0 = epochInfo.oneForZeroToken0.sub(amount0);
+        epochInfo.zeroForOneToken1 = epochInfo.zeroForOneToken1.sub(amount1);
     
         epochInfo.zeroForOneLiquidity = epochInfo.zeroForOneLiquidity.sub(liquidityZero);
         epochInfo.oneForZeroLiquidity = epochInfo.oneForZeroLiquidity.sub(liquidityOne);
@@ -388,12 +391,8 @@ contract Iceberg is BaseHook {
     }
 
     function _safeMulDiv(euint128 a, euint128 b, euint128 c) private returns(euint128) {
-        return FHE.select(c.eq(ZERO), ZERO, _mulDiv(a, b, c));
-    }
-
-    function _mulDiv(euint128 a, euint128 b, euint128 c) private returns(euint128) {
-        euint128 mul = FHE.mul(a, b);
-        return FHE.div(mul, c);
+        euint128 divisor = FHE.select(c.eq(ZERO), ONE, c);  //avoid divide by 0 errors
+        return FHE.div(FHE.mul(a, b), divisor);
     }
 
     function _swapPoolManager(PoolKey calldata key, bool zeroForOne, int256 amountSpecified) private returns(BalanceDelta delta) {
