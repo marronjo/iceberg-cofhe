@@ -296,22 +296,11 @@ contract IcebergTest is Test, Fixtures {
         euint128 userBalanceBeforeWithdrawToken0 = fheToken0.encBalances(user);
         euint128 userBalanceBeforeWithdrawToken1 = fheToken1.encBalances(user);
 
-        euint128 userLiquidity0 = hook.getUserLiquidity(key, user, 0, true);
-        euint128 userLiquidity1 = hook.getUserLiquidity(key, user, 0, false);
-
         euint128 hookBalanceBeforeWithdrawToken0 = fheToken0.encBalances(address(hook));
         euint128 hookBalanceBeforeWithdrawToken1 = fheToken1.encBalances(address(hook));
 
-        // uint128 l0 = _mockStorageHelper(userBalanceBeforeWithdrawToken0);
-        // uint128 l1 = _mockStorageHelper(userBalanceBeforeWithdrawToken1);
-        // uint128 lu0 = _mockStorageHelper(userLiquidity0);
-        // uint128 lu1 = _mockStorageHelper(userLiquidity1);
-
         vm.prank(user);
         (euint128 amount0, euint128 amount1) = hook.withdraw(key, 0);
-
-        uint128 a0 = _mockStorageHelper(amount0);
-        uint128 a1 = _mockStorageHelper(amount1);
 
         euint128 userBalanceAfterWithdrawToken0 = fheToken0.encBalances(user);
         euint128 userBalanceAfterWithdrawToken1 = fheToken1.encBalances(user);
@@ -319,11 +308,11 @@ contract IcebergTest is Test, Fixtures {
         euint128 hookBalanceAfterWithdrawToken0 = fheToken0.encBalances(address(hook));
         euint128 hookBalanceAfterWithdrawToken1 = fheToken1.encBalances(address(hook));
 
-        assertGteEuint(hookBalanceBeforeWithdrawToken1, amount1);   //ensure hook has enough balance to withdraw correct amount
-        //assertLtEuint(hookBalanceAfterWithdrawToken1, amount1);
+        assertEqEuint(userBalanceBeforeWithdrawToken0, userBalanceAfterWithdrawToken0);             //no change
+        assertLtEuint(userBalanceBeforeWithdrawToken1, userBalanceAfterWithdrawToken1);             //gain token1
 
-        //assertEqEuint(userBalanceBeforeWithdrawToken0, userBalanceAfterWithdrawToken0); //no change in token0 balance
-        //assertLtEuint(userBalanceBeforeWithdrawToken1, userBalanceAfterWithdrawToken1); //balance before should be less than after e.g gain token1
+        assertEqEuint(hookBalanceBeforeWithdrawToken0, hookBalanceAfterWithdrawToken0);             //no change
+        assertGtEuint(hookBalanceBeforeWithdrawToken1, hookBalanceAfterWithdrawToken1);             //lose token1
     }
 
     // tick lower should be 0 since pool was initialized with 1-1 SQRT Price
@@ -608,6 +597,10 @@ contract IcebergTest is Test, Fixtures {
     // help with easier to read test assertions
     function _mockStorageHelper(euint128 value) private view returns(uint128){
         return uint128(CFT.mockStorage(euint128.unwrap(value)));
+    }
+
+    function _mockStorageHelper(ebool value) private view returns(bool){
+        return CFT.mockStorage(ebool.unwrap(value)) == 1 ? true : false;
     }
 
     // fetch evalues from mock storage and compare plaintext
