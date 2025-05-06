@@ -27,6 +27,8 @@ import {Fixtures} from "./utils/Fixtures.sol";
 
 import {Queue} from "../src/Queue.sol";
 
+import {HookMock} from "./HookMock.sol";
+
 //FHE Imports
 import {FHE, euint128, euint128, euint32, ebool, InEuint128, InEuint32, InEbool} from "@fhenixprotocol/cofhe-contracts/FHE.sol";
 import {IFHERC20} from "../src/interface/IFHERC20.sol";
@@ -46,6 +48,8 @@ contract IcebergTest is Test, Fixtures {
 
     Iceberg hook;
     PoolId poolId;
+
+    HookMock hookMock;
 
     uint256 tokenId;
     int24 tickLower;
@@ -90,6 +94,10 @@ contract IcebergTest is Test, Fixtures {
         hook = Iceberg(flags);
 
         vm.label(address(hook), "hook");
+
+        //mock hook used to test onlyPoolManager modifier
+        deployCodeTo("HookMock.sol:HookMock", constructorArgs, flags);
+        hookMock = HookMock(flags);
 
         // Create the pool
         key = PoolKey(currency0, currency1, 3000, 60, IHooks(hook));
@@ -313,6 +321,12 @@ contract IcebergTest is Test, Fixtures {
 
         assertEqEuint(hookBalanceBeforeWithdrawToken0, hookBalanceAfterWithdrawToken0);             //no change
         assertGtEuint(hookBalanceBeforeWithdrawToken1, hookBalanceAfterWithdrawToken1);             //lose token1
+    }
+
+    //should revert since afterInitialize called by contract other than poolManager
+    function testOnlyPoolManagerModifier() public {
+        vm.expectRevert(Iceberg.NotManager.selector);
+        hookMock.afterInitializeCall(key);
     }
 
     // tick lower should be 0 since pool was initialized with 1-1 SQRT Price
