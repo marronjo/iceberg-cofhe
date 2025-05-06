@@ -450,6 +450,7 @@ contract IcebergTest is Test, Fixtures {
 
         Queue queue = hook.poolQueue(keccak256(abi.encode(key)));
         assertFalse(queue.isEmpty());
+        assertEq(queue.length(), 1);
 
         euint128 top = queue.peek();
 
