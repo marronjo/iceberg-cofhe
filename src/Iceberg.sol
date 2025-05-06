@@ -180,8 +180,6 @@ contract Iceberg is BaseHook {
         return BaseHook.afterInitialize.selector;
     }
 
-    event DeltaAmounts(uint128 amountA, uint128 amountB);
-
     function _beforeSwap(
         address,
         PoolKey calldata key,
@@ -192,8 +190,8 @@ contract Iceberg is BaseHook {
         Queue queue = getPoolQueue(key);
 
         //if nothing in decryption queue, continue
-        //otherwise try execute trade
-        if(!queue.isEmpty()){
+        //otherwise try execute trades
+        while(!queue.isEmpty()){
 
             euint128 liquidityHandle = queue.peek();
 
@@ -239,8 +237,6 @@ contract Iceberg is BaseHook {
 
                 IFHERC20(Currency.unwrap(key.currency0)).wrap(address(this), amount0); //encrypted wrap newly received (taken) token0
             }
-
-            emit DeltaAmounts(amount0, amount1);
             
             if(order.zeroForOne){
                 epochInfo.zeroForOnefilled = true;
