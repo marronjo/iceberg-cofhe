@@ -1,4 +1,2 @@
 ignore: 
-  - "test/utils/**/*"
-  - "test/custom-accounting/*"
-
+  - "test/"
