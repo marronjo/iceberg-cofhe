@@ -1,3 +1,5 @@
+[![codecov](https://codecov.io/gh/marronjo/iceberg-cofhe/graph/badge.svg?token=K6XI2N7XOL)](https://codecov.io/gh/marronjo/iceberg-cofhe)
+
 # v4-template
 ### **A template for writing Uniswap v4 Hooks 🦄**
 
