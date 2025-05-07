@@ -19,3 +19,7 @@ node_modules/
 
 # Coverage
 lcov.info
+
+# VS Code
+.vscode
+
