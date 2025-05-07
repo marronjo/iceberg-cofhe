@@ -14,19 +14,18 @@ import {FHE, InEuint128, euint128} from "@fhenixprotocol/cofhe-contracts/FHE.sol
 contract HybridFHERC20 is ERC20, IFHERC20 {
 
     //errors
-    error HybridFHERC20__InvalidSender(address sender);
-    error HybridFHERC20__InvalidReceiver(address receiver);
+    error HybridFHERC20__InvalidSender();
+    error HybridFHERC20__InvalidReceiver();
 
     //allow for more natural syntax for euint types
     using FHE for uint256;
 
     //encrypted balances
     mapping(address => euint128) public encBalances;
-    euint128 internal totalEncryptedSupply = FHE.asEuint128(0);
+    euint128 public totalEncryptedSupply = FHE.asEuint128(0);
 
     //zero constant
     euint128 private immutable ZERO = FHE.asEuint128(0);
-    uint256 private immutable TIMEOUT = 100;
 
     constructor(string memory name, string memory symbol) ERC20(name, symbol) {
         FHE.allowThis(ZERO);
@@ -103,10 +102,10 @@ contract HybridFHERC20 is ERC20, IFHERC20 {
     function _transferImpl(address from, address to, euint128 amount) internal returns (euint128) {
         //ensure sender / receiver is not 0x00
         if(from == address(0)){
-            revert HybridFHERC20__InvalidSender(address(0));
+            revert HybridFHERC20__InvalidSender();
         }
         if(to == address(0)){
-            revert HybridFHERC20__InvalidReceiver(address(0));
+            revert HybridFHERC20__InvalidReceiver();
         }
 
         // Make sure the sender has enough tokens.
