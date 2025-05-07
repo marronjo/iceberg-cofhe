@@ -274,6 +274,23 @@ contract HybridFHERC20Test is Test {
         assertEq(token.totalSupply(), userStartingBalance - 1e5); //burn 1e5 public totalSupply
     }
 
+    function testRequestUnwrapInEuint() public {
+        vm.startPrank(user);
+        InEuint128 memory amount = CFT.createInEuint128(1e5, user);
+        euint128 handle = token.requestUnwrap(user, amount);
+
+        vm.warp(block.timestamp + 11);  //ensure result is decrypted
+        uint128 unwrappedAmount = token.getUnwrapResult(user, handle);
+
+        assertEq(unwrappedAmount, 1e5);
+
+        CFT.assertHashValue(token.encBalances(user), userStartingBalance - unwrappedAmount);
+        CFT.assertHashValue(token.totalEncryptedSupply(), userStartingBalance - unwrappedAmount);
+
+        assertEq(token.balanceOf(user), userStartingBalance + unwrappedAmount);
+        assertEq(token.totalSupply(), userStartingBalance + unwrappedAmount);
+    }
+
     function testRequestUnwrap() public {
         euint128 amount = FHE.asEuint128(1e5);
         FHE.allow(amount, address(token));
