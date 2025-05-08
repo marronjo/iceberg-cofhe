@@ -3,6 +3,7 @@
 pragma solidity ^0.8.25;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {IFHERC20} from "./interface/IFHERC20.sol";
 import {FHE, InEuint128, euint128} from "@fhenixprotocol/cofhe-contracts/FHE.sol";
 
 /**
@@ -10,24 +11,25 @@ import {FHE, InEuint128, euint128} from "@fhenixprotocol/cofhe-contracts/FHE.sol
  * Implementation of the bare minimum methods to make
  * the hook work with a hybrid FHE / ERC20 token
  */
-contract HybridFHERC20 is ERC20 {
+contract HybridFHERC20 is ERC20, IFHERC20 {
 
     //errors
-    error HybridFHERC20__InvalidSender(address sender);
-    error HybridFHERC20__InvalidReceiver(address receiver);
+    error HybridFHERC20__InvalidSender();
+    error HybridFHERC20__InvalidReceiver();
 
     //allow for more natural syntax for euint types
     using FHE for uint256;
 
     //encrypted balances
     mapping(address => euint128) public encBalances;
-    euint128 internal totalEncryptedSupply = FHE.asEuint128(0);
+    euint128 public totalEncryptedSupply = FHE.asEuint128(0);
 
     //zero constant
     euint128 private immutable ZERO = FHE.asEuint128(0);
-    uint256 private immutable TIMEOUT = 100;
 
-    constructor(string memory name, string memory symbol) ERC20(name, symbol) {}
+    constructor(string memory name, string memory symbol) ERC20(name, symbol) {
+        FHE.allowThis(ZERO);
+    }
 
     // ----------- Public Mint Functions --------------------
     function mint(address user, uint256 amount) public {
@@ -81,6 +83,14 @@ contract HybridFHERC20 is ERC20 {
     }
 
     // ----------- Encrypted Transfer Functions ---------------
+    function transferEncrypted(address to, InEuint128 memory amount) external returns(euint128) {
+        return _transferImpl(msg.sender, to, FHE.asEuint128(amount));
+    }
+
+    function transferEncrypted(address to, euint128 amount) external returns(euint128) {
+        return _transferImpl(msg.sender, to, amount);
+    }
+
     function transferFromEncrypted(address from, address to, InEuint128 memory amount) external returns(euint128) {
         return _transferImpl(from, to, FHE.asEuint128(amount));
     }
@@ -92,10 +102,10 @@ contract HybridFHERC20 is ERC20 {
     function _transferImpl(address from, address to, euint128 amount) internal returns (euint128) {
         //ensure sender / receiver is not 0x00
         if(from == address(0)){
-            revert HybridFHERC20__InvalidSender(address(0));
+            revert HybridFHERC20__InvalidSender();
         }
         if(to == address(0)){
-            revert HybridFHERC20__InvalidReceiver(address(0));
+            revert HybridFHERC20__InvalidReceiver();
         }
 
         // Make sure the sender has enough tokens.
