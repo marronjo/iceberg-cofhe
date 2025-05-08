@@ -16,6 +16,7 @@
 - Users place encrypted limit orders through the hook (`placeIcebergOrder`) by providing encrypted values:
   - `liquidity`: order size
   - `zeroForOne`: swap direction
+- The `ticklower` price is public, just like a traditional iceberg order. It shows the price you wish to execute a swap without exposing trade size or direction. e.g. the order could be 1 or 1,000,000 and it could be buying or selling token0/token1.
 - Orders are stored in a privacy-preserving mapping, protected by FHE.
 - In the `afterSwap()` callback the hook evaluates encrypted order conditions without leaking user intent.
 - Once matching conditions are met, decryption is securely requested to fill the order.
@@ -74,3 +75,6 @@ Uniswap 🦄
 - [v4-periphery](https://github.com/uniswap/v4-periphery)  
 - [v4-core](https://github.com/uniswap/v4-core)  
 - [v4-by-example](https://v4-by-example.org)  
+
+Other 🧊
+- [Traditional Iceberg Orders](https://www.investopedia.com/terms/i/icebergorder.asp)
