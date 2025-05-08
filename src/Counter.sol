@@ -107,7 +107,7 @@ contract Counter is BaseHook {
         bytes calldata
     ) internal override returns (bytes4) {
         euint128 current = beforeRemoveLiquidityCount[key.toId()];
-        beforeRemoveLiquidityCount[key.toId()] = current.add(FHE.asEuint128(1));
+        beforeRemoveLiquidityCount[key.toId()] = current.add(FHE.asEuint128(1)); //add encrypted 1 to beforeRemoveLiquidityCount
 
         FHE.allowThis(beforeRemoveLiquidityCount[key.toId()]); //allow this contract to access and use this new value
 

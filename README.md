@@ -1,17 +1,19 @@
-# v4-template
-### **A template for writing Uniswap v4 Hooks 🦄**
+# fhe-hook-template
+### **A template for writing Uniswap FHE-Enabled v4 Hooks 🔒🦄**
 
-[`Use this Template`](https://github.com/uniswapfoundation/v4-template/generate)
+> Bridging private computation and public liquidity with Fully Homomorphic Encryption in Uniswap v4 Hooks.
 
-1. The example hook [Counter.sol](src/Counter.sol) demonstrates the `beforeSwap()` and `afterSwap()` hooks
-2. The test template [Counter.t.sol](test/Counter.t.sol) preconfigures the v4 pool manager, test tokens, and test liquidity.
+[`Use this Template`](https://github.com/marronjo/fhe-hook-template/generate)
+
+1. The example hook [Counter.sol](src/Counter.sol) demonstrates basic FHE computation in the `beforeSwap()`, `afterSwap()`, `_beforeAddLiquidity()` and `_beforeRemoveLiquidity()` hooks. It simply adds encrypted '1' to the counter in each hook.
+2. The test template [Counter.t.sol](test/Counter.t.sol) preconfigures the v4 pool manager, test FHE-enabled tokens and test liquidity.
 
 <details>
 <summary>Updating to v4-template:latest</summary>
 
 This template is actively maintained -- you can update the v4 dependencies, scripts, and helpers: 
 ```bash
-git remote add template https://github.com/uniswapfoundation/v4-template
+git remote add template https://github.com/marronjo/fhe-hook-template
 git fetch template
 git merge template/main <BRANCH> --allow-unrelated-histories
 ```
@@ -37,7 +39,7 @@ foundryup
 
 ```
 forge install
-forge test
+forge test --via-ir
 ```
 
 ### Local Development (Anvil)
@@ -61,8 +63,6 @@ See [script/](script/) for hook deployment, pool creation, liquidity provision, 
 
 <details>
 <summary><h2>Troubleshooting</h2></summary>
-
-
 
 ### *Permission Denied*
 
@@ -96,13 +96,17 @@ Hook deployment failures are caused by incorrect flags or incorrect salt mining
 
 ---
 
-Additional resources:
+## 📖 Resources
 
-[Uniswap v4 docs](https://docs.uniswap.org/contracts/v4/overview)
+Fhenix 🔒
+- [FHE Hook Template](https://github.com/marronjo/fhe-hook-template)
+- [CoFhe docs](https://cofhe-docs.fhenix.zone/docs/devdocs/overview)
+- [FHERC20 Token Docs](https://cofhe-docs.fhenix.zone/docs/devdocs/fherc/fherc20)
 
-[v4-periphery](https://github.com/uniswap/v4-periphery) contains advanced hook implementations that serve as a great reference
-
-[v4-core](https://github.com/uniswap/v4-core)
-
-[v4-by-example](https://v4-by-example.org)
+Uniswap 🦄
+- [Hook Examples](https://github.com/Uniswap/v4-periphery/tree/example-contracts/contracts/hooks/examples)
+- [Uniswap v4 docs](https://docs.uniswap.org/contracts/v4/overview)  
+- [v4-periphery](https://github.com/uniswap/v4-periphery)  
+- [v4-core](https://github.com/uniswap/v4-core)  
+- [v4-by-example](https://v4-by-example.org)  
 
