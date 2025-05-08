@@ -30,7 +30,12 @@ contract Fixtures is Deployers, DeployPermit2 {
 
     function deployAndApprovePosm(IPoolManager poolManager) public {
         deployPosm(poolManager);
-        approvePosm();
+        approvePosm(currency0, currency1);
+    }
+
+    function deployAndApprovePosm(IPoolManager poolManager, Currency curr0, Currency curr1) public {
+        deployPosm(poolManager);
+        approvePosm(curr0, curr1);
     }
 
     function deployPosm(IPoolManager poolManager) internal {
@@ -46,9 +51,9 @@ contract Fixtures is Deployers, DeployPermit2 {
         IERC20(Currency.unwrap(currency1)).transfer(to, STARTING_USER_BALANCE);
     }
 
-    function approvePosm() internal {
-        approvePosmCurrency(currency0);
-        approvePosmCurrency(currency1);
+    function approvePosm(Currency curr0, Currency curr1) internal {
+        approvePosmCurrency(curr0);
+        approvePosmCurrency(curr1);
     }
 
     function approvePosmCurrency(Currency currency) internal {
@@ -62,7 +67,7 @@ contract Fixtures is Deployers, DeployPermit2 {
     // Does the same approvals as approvePosm, but for a specific address.
     function approvePosmFor(address addr) internal {
         vm.startPrank(addr);
-        approvePosm();
+        approvePosm(currency0, currency1);
         vm.stopPrank();
     }
 
