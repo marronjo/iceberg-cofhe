@@ -99,7 +99,7 @@ Hook deployment failures are caused by incorrect flags or incorrect salt mining
 ## 📖 Resources
 
 Fhenix 🔒
-- [FHE Hook Template](https://github.com/marronjo/fhe-hook-template)
+- [FHE Limit Order Hook](https://github.com/marronjo/iceberg-cofhe)
 - [CoFhe docs](https://cofhe-docs.fhenix.zone/docs/devdocs/overview)
 - [FHERC20 Token Docs](https://cofhe-docs.fhenix.zone/docs/devdocs/fherc/fherc20)
 
