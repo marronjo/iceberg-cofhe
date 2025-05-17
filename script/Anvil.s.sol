@@ -2,18 +2,18 @@
 pragma solidity ^0.8.19;
 
 import "forge-std/Script.sol";
-import {IHooks} from "v4-core/src/interfaces/IHooks.sol";
-import {Hooks} from "v4-core/src/libraries/Hooks.sol";
-import {PoolManager} from "v4-core/src/PoolManager.sol";
-import {IPoolManager} from "v4-core/src/interfaces/IPoolManager.sol";
-import {PoolModifyLiquidityTest} from "v4-core/src/test/PoolModifyLiquidityTest.sol";
-import {PoolSwapTest} from "v4-core/src/test/PoolSwapTest.sol";
-import {PoolDonateTest} from "v4-core/src/test/PoolDonateTest.sol";
-import {PoolKey} from "v4-core/src/types/PoolKey.sol";
+import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
+import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
+import {PoolManager} from "@uniswap/v4-core/src/PoolManager.sol";
+import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
+import {PoolModifyLiquidityTest} from "@uniswap/v4-core/src/test/PoolModifyLiquidityTest.sol";
+import {PoolSwapTest} from "@uniswap/v4-core/src/test/PoolSwapTest.sol";
+import {PoolDonateTest} from "@uniswap/v4-core/src/test/PoolDonateTest.sol";
+import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
-import {Constants} from "v4-core/src/../test/utils/Constants.sol";
-import {TickMath} from "v4-core/src/libraries/TickMath.sol";
-import {CurrencyLibrary, Currency} from "v4-core/src/types/Currency.sol";
+import {Constants} from "@uniswap/v4-core/src/../test/utils/Constants.sol";
+import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
+import {CurrencyLibrary, Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 import {Counter} from "../src/Counter.sol";
 import {HookMiner} from "v4-periphery/src/utils/HookMiner.sol";
 import {IPositionManager} from "v4-periphery/src/interfaces/IPositionManager.sol";
@@ -24,6 +24,7 @@ import {DeployPermit2} from "../test/utils/forks/DeployPermit2.sol";
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 import {IPositionDescriptor} from "v4-periphery/src/interfaces/IPositionDescriptor.sol";
 import {IWETH9} from "v4-periphery/src/interfaces/external/IWETH9.sol";
+import {SwapParams, ModifyLiquidityParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
 
 /// @notice Forge script for deploying v4 & hooks to **anvil**
 contract CounterScript is Script, DeployPermit2 {
@@ -143,8 +144,8 @@ contract CounterScript is Script, DeployPermit2 {
 
     function _exampleAddLiquidity(PoolKey memory poolKey, int24 tickLower, int24 tickUpper) internal {
         // provisions full-range liquidity twice. Two different periphery contracts used for example purposes.
-        IPoolManager.ModifyLiquidityParams memory liqParams =
-            IPoolManager.ModifyLiquidityParams(tickLower, tickUpper, 100 ether, 0);
+        ModifyLiquidityParams memory liqParams =
+            ModifyLiquidityParams(tickLower, tickUpper, 100 ether, 0);
         lpRouter.modifyLiquidity(poolKey, liqParams, "");
 
         posm.mint(poolKey, tickLower, tickUpper, 100e18, 10_000e18, 10_000e18, msg.sender, block.timestamp + 300, "");
@@ -153,7 +154,7 @@ contract CounterScript is Script, DeployPermit2 {
     function _exampleSwap(PoolKey memory poolKey) internal {
         bool zeroForOne = true;
         int256 amountSpecified = 1 ether;
-        IPoolManager.SwapParams memory params = IPoolManager.SwapParams({
+        SwapParams memory params = SwapParams({
             zeroForOne: zeroForOne,
             amountSpecified: amountSpecified,
             sqrtPriceLimitX96: zeroForOne ? TickMath.MIN_SQRT_PRICE + 1 : TickMath.MAX_SQRT_PRICE - 1 // unlimited impact
