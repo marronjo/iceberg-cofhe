@@ -2,6 +2,8 @@
 forge-std/=node_modules/forge-std/src/
 v4-periphery/=node_modules/@uniswap/v4-periphery/
 @fhenixprotocol/cofhe-contracts/=node_modules/@fhenixprotocol/cofhe-contracts/
-@fhenixprotocol/cofhe-foundry-mocks/=lib/cofhe-foundry-mocks/src/
+@fhenixprotocol/cofhe-foundry-mocks/=node_modules/cofhe-foundry-mocks/src/
 @openzeppelin/contracts-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/
 @openzeppelin/contracts/=node_modules/@openzeppelin/contracts/
+permit2/=node_modules/@uniswap/v4-periphery/lib/permit2/
+solmate/=node_modules/@uniswap/v4-core/lib/solmate/

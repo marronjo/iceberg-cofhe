@@ -30,8 +30,9 @@
 		"@openzeppelin/contracts": "^5.0.0",
 		"@openzeppelin/contracts-upgradeable": "^5.0.0",
 		"@fhenixprotocol/cofhe-contracts": "0.0.13",
-    "@uniswap/v4-core": "1.0.2",
-    "@uniswap/v4-periphery": "1.0.2",
+		"cofhe-foundry-mocks": "github:fhenixprotocol/cofhe-foundry-mocks",
+    	"@uniswap/v4-core": "1.0.2",
+    	"@uniswap/v4-periphery": "1.0.2",
 		"forge-std": "github:foundry-rs/forge-std"
 	},
   "devDependencies": {
