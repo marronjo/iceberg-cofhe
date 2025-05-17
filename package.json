@@ -26,6 +26,14 @@
   },
   "author": "marronjo",
   "license": "MIT",
+  "dependencies": {
+		"@openzeppelin/contracts": "^5.0.0",
+		"@openzeppelin/contracts-upgradeable": "^5.0.0",
+		"@fhenixprotocol/cofhe-contracts": "0.0.13",
+    "@uniswap/v4-core": "1.0.2",
+    "@uniswap/v4-periphery": "1.0.2",
+		"forge-std": "github:foundry-rs/forge-std"
+	},
   "devDependencies": {
 		"@nomicfoundation/hardhat-ethers": "^3.0.8",
 		"@nomicfoundation/hardhat-foundry": "^1.1.3",
