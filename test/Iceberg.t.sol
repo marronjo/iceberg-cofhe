@@ -316,7 +316,7 @@ contract IcebergTest is Test, Fixtures {
         euint128 hookBalanceBeforeWithdrawToken1 = fheToken1.encBalances(address(hook));
 
         vm.prank(user);
-        (euint128 amount0, euint128 amount1) = hook.withdraw(key, 0);
+        hook.withdraw(key, 0);
 
         euint128 userBalanceAfterWithdrawToken0 = fheToken0.encBalances(user);
         euint128 userBalanceAfterWithdrawToken1 = fheToken1.encBalances(user);
@@ -498,7 +498,7 @@ contract IcebergTest is Test, Fixtures {
         euint128 hookBalanceBeforeWithdrawToken1 = fheToken1.encBalances(address(hook));
 
         vm.prank(user);
-        (euint128 amount0, euint128 amount1) = hook.withdraw(key, 0);
+        hook.withdraw(key, 0);
 
         euint128 userBalanceAfterWithdrawToken0 = fheToken0.encBalances(user);
         euint128 userBalanceAfterWithdrawToken1 = fheToken1.encBalances(user);
@@ -689,7 +689,7 @@ contract IcebergTest is Test, Fixtures {
         euint128 hookBalanceBeforeWithdrawToken1 = fheToken1.encBalances(address(hook));
 
         vm.prank(user);
-        (euint128 amount0, euint128 amount1) = hook.withdraw(key, 0);
+        hook.withdraw(key, 0);
 
         euint128 userBalanceAfterWithdrawToken0 = fheToken0.encBalances(user);
         euint128 userBalanceAfterWithdrawToken1 = fheToken1.encBalances(user);
