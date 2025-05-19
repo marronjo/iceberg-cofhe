@@ -3,28 +3,29 @@ pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
 
-import {Hooks} from "v4-core/src/libraries/Hooks.sol";
-import {Currency, CurrencyLibrary} from "v4-core/src/types/Currency.sol";
-import {IHooks} from "v4-core/src/interfaces/IHooks.sol";
-import {IPoolManager} from "v4-core/src/interfaces/IPoolManager.sol";
-import {PoolManager} from "v4-core/src/PoolManager.sol";
-import {PoolId} from "v4-core/src/types/PoolId.sol";
-import {LPFeeLibrary} from "v4-core/src/libraries/LPFeeLibrary.sol";
-import {PoolKey} from "v4-core/src/types/PoolKey.sol";
-import {BalanceDelta} from "v4-core/src/types/BalanceDelta.sol";
-import {TickMath} from "v4-core/src/libraries/TickMath.sol";
-import {Constants} from "v4-core/test/utils/Constants.sol";
-import {PoolModifyLiquidityTest} from "v4-core/src/test/PoolModifyLiquidityTest.sol";
-import {PoolModifyLiquidityTestNoChecks} from "v4-core/src/test/PoolModifyLiquidityTestNoChecks.sol";
-import {PoolSwapTest} from "v4-core/src/test/PoolSwapTest.sol";
-import {SwapRouterNoChecks} from "v4-core/src/test/SwapRouterNoChecks.sol";
-import {PoolDonateTest} from "v4-core/src/test/PoolDonateTest.sol";
-import {PoolNestedActionsTest} from "v4-core/src/test/PoolNestedActionsTest.sol";
-import {PoolTakeTest} from "v4-core/src/test/PoolTakeTest.sol";
-import {PoolClaimsTest} from "v4-core/src/test/PoolClaimsTest.sol";
-import {ActionsRouter} from "v4-core/src/test/ActionsRouter.sol";
-import {LiquidityAmounts} from "v4-core/test/utils/LiquidityAmounts.sol";
-import {StateLibrary} from "v4-core/src/libraries/StateLibrary.sol";
+import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
+import {Currency, CurrencyLibrary} from "@uniswap/v4-core/src/types/Currency.sol";
+import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
+import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
+import {PoolManager} from "@uniswap/v4-core/src/PoolManager.sol";
+import {PoolId} from "@uniswap/v4-core/src/types/PoolId.sol";
+import {LPFeeLibrary} from "@uniswap/v4-core/src/libraries/LPFeeLibrary.sol";
+import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
+import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
+import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
+import {Constants} from "@uniswap/v4-core/test/utils/Constants.sol";
+import {PoolModifyLiquidityTest} from "@uniswap/v4-core/src/test/PoolModifyLiquidityTest.sol";
+import {PoolModifyLiquidityTestNoChecks} from "@uniswap/v4-core/src/test/PoolModifyLiquidityTestNoChecks.sol";
+import {PoolSwapTest} from "@uniswap/v4-core/src/test/PoolSwapTest.sol";
+import {SwapRouterNoChecks} from "@uniswap/v4-core/src/test/SwapRouterNoChecks.sol";
+import {PoolDonateTest} from "@uniswap/v4-core/src/test/PoolDonateTest.sol";
+import {PoolNestedActionsTest} from "@uniswap/v4-core/src/test/PoolNestedActionsTest.sol";
+import {PoolTakeTest} from "@uniswap/v4-core/src/test/PoolTakeTest.sol";
+import {PoolClaimsTest} from "@uniswap/v4-core/src/test/PoolClaimsTest.sol";
+import {ActionsRouter} from "@uniswap/v4-core/src/test/ActionsRouter.sol";
+import {LiquidityAmounts} from "@uniswap/v4-core/test/utils/LiquidityAmounts.sol";
+import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
+import {SwapParams, ModifyLiquidityParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
 
 import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -46,12 +47,12 @@ contract Deployers is Test {
     uint160 public constant MIN_PRICE_LIMIT = TickMath.MIN_SQRT_PRICE + 1;
     uint160 public constant MAX_PRICE_LIMIT = TickMath.MAX_SQRT_PRICE - 1;
 
-    IPoolManager.ModifyLiquidityParams public LIQUIDITY_PARAMS =
-        IPoolManager.ModifyLiquidityParams({tickLower: -120, tickUpper: 120, liquidityDelta: 1e18, salt: 0});
-    IPoolManager.ModifyLiquidityParams public REMOVE_LIQUIDITY_PARAMS =
-        IPoolManager.ModifyLiquidityParams({tickLower: -120, tickUpper: 120, liquidityDelta: -1e18, salt: 0});
-    IPoolManager.SwapParams public SWAP_PARAMS =
-        IPoolManager.SwapParams({zeroForOne: true, amountSpecified: -100, sqrtPriceLimitX96: SQRT_PRICE_1_2});
+    ModifyLiquidityParams public LIQUIDITY_PARAMS =
+        ModifyLiquidityParams({tickLower: -120, tickUpper: 120, liquidityDelta: 1e18, salt: 0});
+    ModifyLiquidityParams public REMOVE_LIQUIDITY_PARAMS =
+        ModifyLiquidityParams({tickLower: -120, tickUpper: 120, liquidityDelta: -1e18, salt: 0});
+    SwapParams public SWAP_PARAMS =
+        SwapParams({zeroForOne: true, amountSpecified: -100, sqrtPriceLimitX96: SQRT_PRICE_1_2});
 
     // Global variables
     Currency internal currency0;
@@ -231,7 +232,7 @@ contract Deployers is Test {
 
         return swapRouter.swap{value: value}(
             _key,
-            IPoolManager.SwapParams({
+            SwapParams({
                 zeroForOne: zeroForOne,
                 amountSpecified: amountSpecified,
                 sqrtPriceLimitX96: zeroForOne ? MIN_PRICE_LIMIT : MAX_PRICE_LIMIT
@@ -253,7 +254,7 @@ contract Deployers is Test {
             amount1
         );
 
-        IPoolManager.ModifyLiquidityParams memory params = IPoolManager.ModifyLiquidityParams({
+        ModifyLiquidityParams memory params = ModifyLiquidityParams({
             tickLower: LIQUIDITY_PARAMS.tickLower,
             tickUpper: LIQUIDITY_PARAMS.tickUpper,
             liquidityDelta: int128(liquidityDelta),
@@ -276,7 +277,7 @@ contract Deployers is Test {
 
         return swapRouter.swap{value: msgValue}(
             _key,
-            IPoolManager.SwapParams({
+            SwapParams({
                 zeroForOne: zeroForOne,
                 amountSpecified: amountSpecified,
                 sqrtPriceLimitX96: zeroForOne ? MIN_PRICE_LIMIT : MAX_PRICE_LIMIT
