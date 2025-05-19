@@ -58,8 +58,14 @@ contract CounterTest is Test, Fixtures {
         //initialise new CoFheTest instance with logging turned off
         CFT = new CoFheTest(false);
 
-        fheToken0 = new HybridFHERC20("TOKEN0", "TOK0");
-        fheToken1 = new HybridFHERC20("TOKEN1", "TOK1");
+        bytes memory token0Args = abi.encode("TOKEN0", "TOK0");
+        deployCodeTo("HybridFHERC20.sol:HybridFHERC20", token0Args, address(123));
+
+        bytes memory token1Args = abi.encode("TOKEN1", "TOK1");
+        deployCodeTo("HybridFHERC20.sol:HybridFHERC20", token1Args, address(456));
+
+        fheToken0 = HybridFHERC20(address(123));
+        fheToken1 = HybridFHERC20(address(456));    //ensure address token1 always > address token0
 
         vm.label(user, "user");
         vm.label(address(this), "test");
