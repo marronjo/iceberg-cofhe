@@ -70,6 +70,7 @@ Fhenix 🔒
 - [FHERC20 Token Docs](https://cofhe-docs.fhenix.zone/docs/devdocs/fherc/fherc20)
 
 Uniswap 🦄
+- [Awesome Uniswap Hooks](https://github.com/ora-io/awesome-uniswap-hooks)
 - [Hook Examples](https://github.com/Uniswap/v4-periphery/tree/example-contracts/contracts/hooks/examples)
 - [Uniswap v4 docs](https://docs.uniswap.org/contracts/v4/overview)  
 - [v4-periphery](https://github.com/uniswap/v4-periphery)  
