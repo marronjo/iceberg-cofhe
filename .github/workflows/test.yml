@@ -11,7 +11,7 @@ env:
   FOUNDRY_PROFILE: ci
 
 jobs:
-  check:
+  foundry-check:
     strategy:
       fail-fast: true
 
@@ -60,6 +60,10 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
+  hardhat-check:
+    strategy:
+      fail-fast: true
+
     name: Hardhat project
     runs-on: ubuntu-latest
     steps:
@@ -76,7 +80,7 @@ jobs:
         run: |
           pnpm --version
 
-      - name: Install pnpm dependencies #including Foundry
+      - name: Install pnpm dependencies
         run: |
           pnpm install
 
