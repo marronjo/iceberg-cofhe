@@ -35,8 +35,8 @@ Requires [foundry](https://book.getfoundry.sh).
 #manage foundry toolchain
 foundryup
 
-#install dependencies e.g. Fhenix contract lib
-forge install
+#install dependencies using npm/pnpm
+pnpm install
 
 #flag is required, or else stack too deep errors!
 forge test --via-ir
