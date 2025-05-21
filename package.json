@@ -6,20 +6,20 @@
     "test": "forge test --via-ir"
   },
   "keywords": [
-		"blockchain",
-		"ethereum",
-		"smart-contracts",
-		"solidity",
-		"FHE",
-		"encryption",
-		"privacy",
-		"coprocessor",
-		"fhenix",
-		"cofhe",
+    "blockchain",
+    "ethereum",
+    "smart-contracts",
+    "solidity",
+    "FHE",
+    "encryption",
+    "privacy",
+    "coprocessor",
+    "fhenix",
+    "cofhe",
     "uniswap",
     "trading",
     "hooks"
-	],
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/marronjo/iceberg-cofhe.git"
@@ -27,9 +27,18 @@
   "author": "marronjo",
   "license": "MIT",
   "devDependencies": {
-		"@nomicfoundation/hardhat-ethers": "^3.0.8",
-		"@nomicfoundation/hardhat-foundry": "^1.1.3",
-		"@nomicfoundation/hardhat-toolbox": "^5.0.0",
-		"hardhat": "^2.22.19"
-	}
+    "@nomicfoundation/hardhat-ethers": "^3.0.8",
+    "@nomicfoundation/hardhat-foundry": "^1.1.3",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "hardhat": "^2.22.19",
+    "cofhe-foundry-mocks": "github:fhenixprotocol/cofhe-foundry-mocks",
+    "forge-std": "github:foundry-rs/forge-std"
+  },
+  "dependencies": {
+    "@fhenixprotocol/cofhe-contracts": "0.0.13",
+    "@openzeppelin/contracts": "^5.0.0",
+    "@openzeppelin/contracts-upgradeable": "^5.0.0",
+    "@uniswap/v4-core": "1.0.2",
+    "@uniswap/v4-periphery": "1.0.2"
+  }
 }
