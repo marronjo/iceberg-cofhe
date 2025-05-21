@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {euint128} from "@fhenixprotocol/cofhe-contracts/FHE.sol";
-import {DoubleEndedQueue} from "openzeppelin-contracts/contracts/utils/structs/DoubleEndedQueue.sol";
+import {DoubleEndedQueue} from "@openzeppelin/contracts/utils/structs/DoubleEndedQueue.sol";
 
 contract Queue {
 

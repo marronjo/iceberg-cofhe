@@ -19,6 +19,7 @@ import {StateLibrary} from "v4-core/src/libraries/StateLibrary.sol";
 import {SortTokens} from "./utils/SortTokens.sol";
 import {Constants} from "v4-core/test/utils/Constants.sol";
 import {EpochLibrary, Epoch} from "../src/lib/EpochLibrary.sol";
+import {SwapParams, ModifyLiquidityParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
 
 import {LiquidityAmounts} from "v4-core/test/utils/LiquidityAmounts.sol";
 import {IPositionManager} from "v4-periphery/src/interfaces/IPositionManager.sol";
@@ -948,7 +949,7 @@ contract IcebergTest is Test, Fixtures {
     }
 
     function testQueueEmptyAfterSwap() public {
-        IPoolManager.SwapParams memory params = IPoolManager.SwapParams({
+        SwapParams memory params = SwapParams({
             zeroForOne: true,
             amountSpecified: 100,
             sqrtPriceLimitX96: MIN_PRICE_LIMIT
@@ -1079,7 +1080,7 @@ contract IcebergTest is Test, Fixtures {
     }
 
     function doSwap(bool zeroForOne, int256 amount, int24 tick) private {
-        IPoolManager.SwapParams memory params = IPoolManager.SwapParams({
+        SwapParams memory params = SwapParams({
             zeroForOne: zeroForOne,
             amountSpecified: amount,
             sqrtPriceLimitX96: TickMath.getSqrtPriceAtTick(tick)
@@ -1090,7 +1091,7 @@ contract IcebergTest is Test, Fixtures {
     }  
 
     function doSwap(bool zeroForOne, int256 amount) private {
-        IPoolManager.SwapParams memory params = IPoolManager.SwapParams({
+        SwapParams memory params = SwapParams({
             zeroForOne: zeroForOne,
             amountSpecified: amount,
             sqrtPriceLimitX96: zeroForOne ? MIN_PRICE_LIMIT : MAX_PRICE_LIMIT

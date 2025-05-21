@@ -18,6 +18,7 @@ import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
 import {EpochLibrary, Epoch} from "./lib/EpochLibrary.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
+import {SwapParams, ModifyLiquidityParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
 
 //Fhenix Imports
 import { 
@@ -183,7 +184,7 @@ contract Iceberg is BaseHook {
     function _beforeSwap(
         address,
         PoolKey calldata key,
-        IPoolManager.SwapParams calldata,
+        SwapParams calldata,
         bytes calldata
     ) internal override onlyByManager returns (bytes4, BeforeSwapDelta, uint24) {
         
@@ -305,7 +306,7 @@ contract Iceberg is BaseHook {
     function _afterSwap(
         address,
         PoolKey calldata key,
-        IPoolManager.SwapParams calldata params,
+        SwapParams calldata params,
         BalanceDelta,
         bytes calldata
     ) internal override onlyByManager returns (bytes4, int128) {
@@ -392,7 +393,7 @@ contract Iceberg is BaseHook {
     }
 
     function _swapPoolManager(PoolKey calldata key, bool zeroForOne, int256 amountSpecified) private returns(BalanceDelta delta) {
-        IPoolManager.SwapParams memory params = IPoolManager.SwapParams({
+        SwapParams memory params = SwapParams({
             zeroForOne: zeroForOne,
             amountSpecified: amountSpecified,
             sqrtPriceLimitX96: zeroForOne ? 
