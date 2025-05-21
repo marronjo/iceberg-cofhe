@@ -31,9 +31,12 @@ jobs:
         run: |
           pnpm --version
 
-      - name: Install pnpm dependencies #including Foundry
+      - name: Install pnpm dependencies
         run: |
           pnpm install
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
 
       - name: Show Forge Version
         run: |
@@ -69,6 +72,9 @@ jobs:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
