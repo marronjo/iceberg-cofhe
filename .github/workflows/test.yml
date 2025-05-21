@@ -38,7 +38,6 @@ jobs:
       - name: Show Forge Version
         run: |
           forge --version
-        id: build
 
       - name: Run Forge build
         run: |
