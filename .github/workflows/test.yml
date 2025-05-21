@@ -22,20 +22,32 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
         with:
-          version: nightly
+          version: 8
+
+      - name: Show pnpm version
+        run: |
+          pnpm --version
+
+      - name: Install pnpm dependencies #including Foundry
+        run: |
+          pnpm install
+
+      - name: Show Forge Version
+        run: |
+          forge --version
+        id: build
 
       - name: Run Forge build
         run: |
-          forge --version
           forge build --via-ir
         id: build
 
       - name: Run Forge tests
         run: |
-          forge test --via-ir -vvv
+          forge test --via-ir
         id: test
       
       - name: Test Coverage
@@ -47,3 +59,28 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+
+    name: Hardhat project
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8
+
+      - name: Show pnpm version
+        run: |
+          pnpm --version
+
+      - name: Install pnpm dependencies #including Foundry
+        run: |
+          pnpm install
+
+      - name: Hardhat compile
+        run: |
+          pnpm hardhat compile
+        id: build
