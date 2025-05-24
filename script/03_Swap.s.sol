@@ -22,7 +22,7 @@ contract SwapScript is Script, Constants, Config {
     /////////////////////////////////////
 
     // PoolSwapTest Contract address, default to the anvil address
-    PoolSwapTest swapRouter = PoolSwapTest(0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9);
+    PoolSwapTest swapRouter = PoolSwapTest(0x9B6b46e2c869aa39918Db7f52f5557FE577B6eEe); //sepolia
 
     // --- pool configuration --- //
     // fees paid by swappers that accrue to liquidity providers
@@ -38,6 +38,12 @@ contract SwapScript is Script, Constants, Config {
             hooks: hookContract
         });
 
+        // vm.broadcast();
+        // token0.mint(msg.sender, 1e22);
+
+        // vm.broadcast();
+        // token1.mint(msg.sender, 1e22);
+
         // approve tokens to the swap router
         vm.broadcast();
         token0.approve(address(swapRouter), type(uint256).max);
@@ -47,10 +53,10 @@ contract SwapScript is Script, Constants, Config {
         // ------------------------------ //
         // Swap 100e18 token0 into token1 //
         // ------------------------------ //
-        bool zeroForOne = true;
+        bool zeroForOne = false;
         SwapParams memory params = SwapParams({
             zeroForOne: zeroForOne,
-            amountSpecified: 100e18,
+            amountSpecified: 1e18,
             sqrtPriceLimitX96: zeroForOne ? MIN_PRICE_LIMIT : MAX_PRICE_LIMIT // unlimited impact
         });
 
