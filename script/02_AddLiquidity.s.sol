@@ -30,12 +30,12 @@ contract AddLiquidityScript is Script, Constants, Config {
     int24 tickSpacing = 60;
 
     // --- liquidity position configuration --- //
-    uint256 public token0Amount = 1e20;
-    uint256 public token1Amount = 1e20;
+    uint256 public token0Amount = 1e30;
+    uint256 public token1Amount = 1e30;
 
     // range of the position
-    int24 tickLower = -600; // must be a multiple of tickSpacing
-    int24 tickUpper = 600;
+    int24 tickLower = -6000; // must be a multiple of tickSpacing
+    int24 tickUpper = 6000;
     /////////////////////////////////////
 
     function run() external {
@@ -46,6 +46,13 @@ contract AddLiquidityScript is Script, Constants, Config {
             tickSpacing: tickSpacing,
             hooks: hookContract
         });
+
+        // Give myself all the tokens!!
+        // vm.broadcast();
+        // token0.mint(msg.sender, 1e60);
+
+        // vm.broadcast();
+        // token1.mint(msg.sender, 1e60);
 
         (uint160 sqrtPriceX96,,,) = POOLMANAGER.getSlot0(pool.toId());
 
