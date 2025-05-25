@@ -33,6 +33,9 @@ importers:
       '@nomicfoundation/hardhat-toolbox':
         specifier: ^5.0.0
         version: 5.0.0(10a32c7f1ebccc2257b5ed128faed837)
+      bignumber.js:
+        specifier: ^9.3.0
+        version: 9.3.0
       cofhe-foundry-mocks:
         specifier: github:fhenixprotocol/cofhe-foundry-mocks
         version: '@fhenixprotocol/cofhe-foundry-mocks@https://codeload.github.com/fhenixprotocol/cofhe-foundry-mocks/tar.gz/1c3d7f178cdd3c7cfd72de0abd054a0adb21c8d4'
@@ -635,6 +638,9 @@ packages:
 
   bech32@1.1.4:
     resolution: {integrity: sha512-s0IrSOzLlbvX7yp4WBfPITzpAU8sqQcpsmwXDiKwrG4r491vwCO/XpejasRNl0piBMe/DvP4Tz0mIS/X1DPJBQ==}
+
+  bignumber.js@9.3.0:
+    resolution: {integrity: sha512-EM7aMFTXbptt/wZdMlBv2t8IViwQL+h6SLHosp8Yf0dqJMTnY6iL32opnAB6kAdL0SZPuvcAzFr31o0c/R3/RA==}
 
   binary-extensions@2.3.0:
     resolution: {integrity: sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw==}
@@ -2880,6 +2886,8 @@ snapshots:
       safe-buffer: 5.2.1
 
   bech32@1.1.4: {}
+
+  bignumber.js@9.3.0: {}
 
   binary-extensions@2.3.0: {}
 

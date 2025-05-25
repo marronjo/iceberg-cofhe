@@ -3,7 +3,7 @@ import '@nomicfoundation/hardhat-toolbox'
 import '@nomicfoundation/hardhat-foundry'
 import '@nomicfoundation/hardhat-ethers'
 
-//import './tasks'
+import './tasks'
 
 const config: HardhatUserConfig = {
 	solidity: {
