@@ -4,8 +4,8 @@ import '@nomicfoundation/hardhat-foundry'
 import '@nomicfoundation/hardhat-ethers'
 
 import './tasks'
-const ETH_SEPOLIA = vars.get("ETH_SEPOLIA");
-const PRIVATE_KEY = vars.get("PRIVATE_KEY");
+const ETH_SEPOLIA = vars.has("ETH_SEPOLIA") ? vars.get("ETH_SEPOLIA") : "TEST";
+const PRIVATE_KEY = vars.has("PRIVATE_KEY") ? vars.get("PRIVATE_KEY") : "TEST";
 
 const config: HardhatUserConfig = {
 	solidity: {
