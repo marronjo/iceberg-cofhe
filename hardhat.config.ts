@@ -1,9 +1,11 @@
-import { HardhatUserConfig } from 'hardhat/config'
+import { HardhatUserConfig, vars } from 'hardhat/config'
 import '@nomicfoundation/hardhat-toolbox'
 import '@nomicfoundation/hardhat-foundry'
 import '@nomicfoundation/hardhat-ethers'
 
 import './tasks'
+const ETH_SEPOLIA = vars.get("ETH_SEPOLIA");
+const PRIVATE_KEY = vars.get("PRIVATE_KEY");
 
 const config: HardhatUserConfig = {
 	solidity: {
@@ -24,6 +26,13 @@ const config: HardhatUserConfig = {
 				'0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6',
 			],
 		},
+		sepolia: {
+			url: `${ETH_SEPOLIA}`,
+			chainId: 11155111,
+			accounts: [
+				`${PRIVATE_KEY}`
+			]
+		}
 	},
 }
 
