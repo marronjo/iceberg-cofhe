@@ -42,8 +42,8 @@ library EasyPosm {
         (Currency currency0, Currency currency1) = (poolKey.currency0, poolKey.currency1);
 
         MintData memory mintData = MintData({
-            balance0Before: currency0.balanceOf(msg.sender),
-            balance1Before: currency1.balanceOf(msg.sender),
+            balance0Before: currency0.balanceOf(address(this)),
+            balance1Before: currency1.balanceOf(address(this)),
             params: new bytes[](2)
         });
         mintData.params[0] =
@@ -59,8 +59,8 @@ library EasyPosm {
         );
 
         delta = toBalanceDelta(
-            -(mintData.balance0Before - currency0.balanceOf(msg.sender)).toInt128(),
-            -(mintData.balance1Before - currency1.balanceOf(msg.sender)).toInt128()
+            -(mintData.balance0Before - currency0.balanceOf(address(this))).toInt128(),
+            -(mintData.balance1Before - currency1.balanceOf(address(this))).toInt128()
         );
     }
 
