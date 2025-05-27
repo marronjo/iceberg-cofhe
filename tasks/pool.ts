@@ -1,24 +1,30 @@
 import { task } from 'hardhat/config';
 import { BigNumber } from 'bignumber.js';
+import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 const sepoliaStateView = "0xE1Dd9c3fA50EDB962E442f60DfBc432e24537E4C";
 const poolKey = "0x9b977b2a33d582e2295f5d8aac6a448b0533c5b65f30bb973f9fc1fbe8f25248";
 const decimalPrecision = 18;
 
 task('get-exchange-rate', 'Fetch current exchange rate from Uniswap v4 pool').setAction(async (taskArgs, hre) => {
+  const contract = await getStateViewContract(hre);
+  const [sqrtPricex96, , , ] = await contract.getSlot0(poolKey);
+  logExchangeRate(sqrtPricex96.toString());
+});
 
+task('get-pool-state', 'Fetch current state of Uniswap v4 pool').setAction(async (taskArgs, hre) => {
+  const contract = await getStateViewContract(hre);
+  const [sqrtPricex96, tick, protocolFee, lpFee] = await contract.getSlot0(poolKey);
+  logPoolState(sqrtPricex96, tick, protocolFee, lpFee);
+});
+
+const getStateViewContract = async (hre: HardhatRuntimeEnvironment) => {
   const stateViewInterface = new hre.ethers.Interface([
     "function getSlot0(bytes32 poolId) view returns (uint160 sqrtPriceX96, int24 tick, uint24 protocolFee, uint24 lpFee)"    
   ]);
-
   const [signer] = await hre.ethers.getSigners();
-  const contract = new hre.ethers.Contract(sepoliaStateView, stateViewInterface, signer);
-
-  const [sqrtPricex96, tick, protocolFee, lpFee] = await contract.getSlot0(poolKey);
-
-  logPoolState(sqrtPricex96, tick, protocolFee, lpFee);
-  logExchangeRate(sqrtPricex96.toString());
-});
+  return new hre.ethers.Contract(sepoliaStateView, stateViewInterface, signer);
+}
 
 const logPoolState = (sqrtPriceX96: string, tick: string, protocolFee: string, lpFee: string) => {
   console.log("");
