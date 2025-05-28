@@ -1,12 +1,13 @@
 import { task } from 'hardhat/config';
+import { cofhejs, Encryptable } from 'cofhejs/node';
+import { HardhatRuntimeEnvironment } from 'hardhat/types';
+import { PoolKeyStruct, Iceberg } from '../typechain-types/src/Iceberg';
 
 const icebergSepolia = '0x4402948CD6fe4fb6070DEA39B7AB9b25e5CB90C0';
-import icebergAbi from '../out/Iceberg.sol/Iceberg.json';
+import icebergAbi from '../artifacts/src/Iceberg.sol/Iceberg.json';
 
 task('get-iceberg-premissions', 'get iceberg hook permissions').setAction(async(taskArgs, hre) => {
-    const [signer] = await hre.ethers.getSigners();
-
-    const iceberg = new hre.ethers.Contract(icebergSepolia, icebergAbi.abi, signer);
+    const iceberg = await getIcebergContract(hre);    
 
     const [ beforeInitialize,
             afterInitialize,
@@ -42,20 +43,45 @@ task('get-iceberg-premissions', 'get iceberg hook permissions').setAction(async(
 });
 
 task('place-iceberg-order', 'place encrypted iceberg order').setAction(async (taskArgs, hre) => {
+    const [signer] = await hre.ethers.getSigners();
+    const provider = hre.ethers.provider;
 
-    console.log('under maintenance');
+    await cofhejs.initializeWithEthers({
+        ethersProvider: provider,
+        ethersSigner: signer,
+        environment: 'TESTNET'
+    });
 
-    // const [signer] = await hre.ethers.getSigners();
-    // const provider = hre.ethers.provider;
+    const iceberg = await getIcebergContract(hre);
 
-    // TODO : fix cofhejs init error
-    // cofhejs.initializeWithEthers({
-    //     ethersProvider: provider,
-    //     ethersSigner: signer,
-    //     environment: 'TESTNET'
-    // });
+    const encInputs = await cofhejs.encrypt([Encryptable.bool(true), Encryptable.uint128(1000n)]);
 
-    // await cofhejs.createPermit();
+    if(!encInputs.success || encInputs.data === null){
+        console.log("Error encrypting inputs");
+        return;
+    }
+    
+    const zeroForOne = encInputs.data[0];
+    const liquidity = encInputs.data[1];
+    const tickLower = 600;
 
-    // const zeroForOne = await cofhejs.encrypt([Encryptable.bool(true)]);
-});
+    const poolKey: PoolKeyStruct = {
+        currency0 : "0x0eC274fFB635b534086716855BAc795b841BD490",
+        currency1 : "0xaAA70eC4269B182fa49Cec06C9617aa38b12A647",
+        fee : 3000,
+        tickSpacing : 60,
+        hooks: icebergSepolia
+    }
+
+    console.log(zeroForOne);
+    console.log(liquidity);
+    console.log(poolKey);
+
+    const tx = await iceberg.placeIcebergOrder(poolKey, tickLower, zeroForOne, liquidity);
+    await tx.wait();
+}); 
+
+const getIcebergContract = async (hre: HardhatRuntimeEnvironment) => {
+    const [signer] = await hre.ethers.getSigners();
+    return new hre.ethers.Contract(icebergSepolia, icebergAbi.abi, signer);
+}
