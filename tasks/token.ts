@@ -19,7 +19,7 @@ task('get-token-balances', 'get user token balances').setAction(async (taskArgs,
     const userBalance1 = await token1Contract.balanceOf(signer.address);
 
     const output0 = await cofhejs.unseal(userEncBalance0, FheTypes.Uint128);
-    const output1 = await cofhejs.unseal(userEncBalance0, FheTypes.Uint128);    
+    const output1 = await cofhejs.unseal(userEncBalance1, FheTypes.Uint128);
 
     console.log('user token0 public balance : ' + userBalance0);
     console.log('user token1 public balance : ' + userBalance1);
