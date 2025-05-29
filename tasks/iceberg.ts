@@ -1,18 +1,9 @@
 import { task } from 'hardhat/config';
 import { cofhejs, Encryptable } from 'cofhejs/node';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { PoolKeyStruct } from '../typechain-types/src/Iceberg';
+import { icebergAddress, poolKey } from './constants';
 
-const icebergSepolia = '0x4402948CD6fe4fb6070DEA39B7AB9b25e5CB90C0';
 import icebergAbi from '../artifacts/src/Iceberg.sol/Iceberg.json';
-
-const poolKey: PoolKeyStruct = {
-    currency0 : "0x0eC274fFB635b534086716855BAc795b841BD490",
-    currency1 : "0xaAA70eC4269B182fa49Cec06C9617aa38b12A647",
-    fee : 3000,
-    tickSpacing : 60,
-    hooks: icebergSepolia
-}
 
 task('get-iceberg-permissions', 'get iceberg hook permissions').setAction(async(taskArgs, hre) => {
     const iceberg = await getIcebergContract(hre);    
@@ -51,9 +42,9 @@ task('get-iceberg-permissions', 'get iceberg hook permissions').setAction(async(
 });
 
 task('place-iceberg-order', 'place encrypted iceberg order')
-.addParam("zeroForOne", "direction of trade, true for 0->1, false for 1->0 token swap")
-.addParam("liquidity", "size of the iceberg order")
-.addParam("tickLower", "tick price to place order at")
+.addParam('zeroForOne', 'direction of trade, true for 0->1, false for 1->0 token swap')
+.addParam('liquidity', 'size of the iceberg order')
+.addParam('tickLower', 'tick price to place order at')
 .setAction(async (taskArgs, hre) => {
     await initialiseCofheJs(hre);
     const iceberg = await getIcebergContract(hre);
@@ -65,7 +56,7 @@ task('place-iceberg-order', 'place encrypted iceberg order')
     const encInputs = await cofhejs.encrypt([Encryptable.bool(zeroForOneInput), Encryptable.uint128(liquidityInput)]);
 
     if(!encInputs.success){
-        console.log("Error encrypting inputs");
+        console.error("Error encrypting inputs", encInputs.error);
         return;
     }
     
@@ -84,7 +75,7 @@ task('place-iceberg-order', 'place encrypted iceberg order')
 
 const getIcebergContract = async (hre: HardhatRuntimeEnvironment) => {
     const [signer] = await hre.ethers.getSigners();
-    return new hre.ethers.Contract(icebergSepolia, icebergAbi.abi, signer);
+    return new hre.ethers.Contract(icebergAddress, icebergAbi.abi, signer);
 }
 
 const initialiseCofheJs = async (hre: HardhatRuntimeEnvironment) => {
