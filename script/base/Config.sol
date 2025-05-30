@@ -19,7 +19,7 @@ contract Config {
         if(block.chainid == 11155111){      // Ethereum Sepolia
             token0 = IFHERC20(address(0x0eA00720cAA3b6A5d18683D09A75E8425934529c));
             token1 = IFHERC20(address(0xBA131d183F67dD1B4252487681b598B6bC165D17));
-            hookContract = IHooks(address(0x9c5c79E16f1366af6867c61919aCF8E1471290C0));
+            hookContract = IHooks(address(0x5487bfA4195EB06d0084e3B5Cb52970396C350c0));
             currency0 = Currency.wrap(address(token0));
             currency1 = Currency.wrap(address(token1));
         }
