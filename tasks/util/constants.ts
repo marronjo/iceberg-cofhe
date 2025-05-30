@@ -1,4 +1,4 @@
-import { PoolKeyStruct } from "../typechain-types/src/Iceberg";
+import { PoolKeyStruct } from "../../typechain-types/src/Iceberg";
 
 // constants for iceberg pool on sepolia
 export const token0 = '0x0eC274fFB635b534086716855BAc795b841BD490';

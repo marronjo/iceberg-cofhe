@@ -1,7 +1,7 @@
 import { task } from 'hardhat/config';
 import { BigNumber } from 'bignumber.js';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { poolId, stateView, stateViewIface } from './constants';
+import { poolId, stateView, stateViewIface } from './util/constants';
 
 const decimalPrecision = 18;
 

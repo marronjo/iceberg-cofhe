@@ -1,12 +1,13 @@
 import { task } from 'hardhat/config';
 import { cofhejs, Encryptable } from 'cofhejs/node';
-import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { icebergAddress, poolKey } from './constants';
+import { icebergAddress, poolKey } from './util/constants';
+import { initialiseCofheJs } from './util/common';
 
 import icebergAbi from '../artifacts/src/Iceberg.sol/Iceberg.json';
 
 task('get-iceberg-permissions', 'get iceberg hook permissions').setAction(async(taskArgs, hre) => {
-    const iceberg = await getIcebergContract(hre);    
+    const [signer] = await hre.ethers.getSigners();
+    const iceberg = new hre.ethers.Contract(icebergAddress, icebergAbi.abi, signer);
 
     const [ beforeInitialize,
             afterInitialize,
@@ -46,8 +47,10 @@ task('place-iceberg-order', 'place encrypted iceberg order')
 .addParam('liquidity', 'size of the iceberg order')
 .addParam('tickLower', 'tick price to place order at')
 .setAction(async (taskArgs, hre) => {
-    await initialiseCofheJs(hre);
-    const iceberg = await getIcebergContract(hre);
+    const [signer] = await hre.ethers.getSigners();
+
+    await initialiseCofheJs(signer);
+    const iceberg = new hre.ethers.Contract(icebergAddress, icebergAbi.abi, signer);
 
     const zeroForOneInput: boolean = taskArgs.zeroForOne === 'true';
     const liquidityInput: bigint = BigInt(taskArgs.liquidity);
@@ -63,28 +66,9 @@ task('place-iceberg-order', 'place encrypted iceberg order')
     const zeroForOne = encInputs.data[0];
     const liquidity = encInputs.data[1];
 
-    console.log(zeroForOne);
-    console.log(liquidity);
-
     const tx = await iceberg.placeIcebergOrder(poolKey, tickLower, zeroForOne, liquidity);
     await tx.wait();
 
     console.log("Order placed successfully!");
     console.log("Transaction hash : " + tx.hash);
 }); 
-
-const getIcebergContract = async (hre: HardhatRuntimeEnvironment) => {
-    const [signer] = await hre.ethers.getSigners();
-    return new hre.ethers.Contract(icebergAddress, icebergAbi.abi, signer);
-}
-
-const initialiseCofheJs = async (hre: HardhatRuntimeEnvironment) => {
-    const [signer] = await hre.ethers.getSigners();
-    const provider = hre.ethers.provider;
-
-    await cofhejs.initializeWithEthers({
-        ethersProvider: provider,
-        ethersSigner: signer,
-        environment: 'TESTNET'
-    });
-}
