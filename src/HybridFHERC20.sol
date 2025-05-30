@@ -164,6 +164,7 @@ contract HybridFHERC20 is ERC20, IFHERC20 {
     function _requestUnwrap(address user, euint128 amount) internal returns(euint128 burnAmount) {
         burnAmount = _calculateBurnAmount(user, amount);
         //request decrpytion of burn amount
+        FHE.allowThis(burnAmount);
         FHE.decrypt(burnAmount);
     }
 
