@@ -336,6 +336,7 @@ contract Iceberg is BaseHook {
             //request unwrap of order amount from coprocessor
             address token = zeroForOne ? address(Currency.unwrap(key.currency0)) : address(Currency.unwrap(key.currency1));
 
+            FHE.allowThis(liquidityTotal); //add allow for hook contract
             FHE.allow(liquidityTotal, token);
             euint128 liquidityHandle = IFHERC20(token).requestUnwrap(address(this), liquidityTotal);
 

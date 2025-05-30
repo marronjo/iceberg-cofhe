@@ -44,8 +44,8 @@ task('mint-encrypted', 'mint encrypted tokens to user').setAction(async (taskArg
 
     console.log(amount);
 
-    await token0Contract.mintEncrypted(signer.address, amount.data[0].ctHash);
-    await token1Contract.mintEncrypted(signer.address, amount.data[0].ctHash);
+    await token0Contract.mintEncrypted(signer.address, amount.data[0]);
+    await token1Contract.mintEncrypted(signer.address, amount.data[0]);
 
     console.log('Great Success');
 });
