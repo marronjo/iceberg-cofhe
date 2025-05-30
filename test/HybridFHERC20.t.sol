@@ -35,7 +35,10 @@ contract HybridFHERC20Test is Test {
         token.mintEncrypted(user, balance);
         vm.stopPrank();
 
-        token.mintEncrypted(user2, FHE.asEuint128(0));  //init value in mock storage
+        vm.startPrank(user2);
+        InEuint128 memory balance2 = CFT.createInEuint128(uint128(user2StartingBalance), user2);
+        token.mintEncrypted(user2, balance2);  //init value in mock storage
+        vm.stopPrank();
     }
 
     function testPublicMint() public {
@@ -70,44 +73,12 @@ contract HybridFHERC20Test is Test {
         CFT.assertHashValue(token.totalEncryptedSupply(), userStartingBalance + 1e5);
     }
 
-    function testEncryptedMintEuint() public {
-        CFT.assertHashValue(token.encBalances(user), userStartingBalance);
-        CFT.assertHashValue(token.totalEncryptedSupply(), userStartingBalance);
-
-        vm.startPrank(user);
-        euint128 balance = FHE.asEuint128(1e5);
-
-        //since InEuint with user signature is not created, must allow token to use new balance
-        FHE.allow(balance, address(token)); 
-        token.mintEncrypted(user, balance);
-        vm.stopPrank();
-
-        CFT.assertHashValue(token.encBalances(user), userStartingBalance + 1e5);
-        CFT.assertHashValue(token.totalEncryptedSupply(), userStartingBalance + 1e5);
-    }
-
     function testEncryptedBurnInEuint() public {
         CFT.assertHashValue(token.encBalances(user), userStartingBalance);
         CFT.assertHashValue(token.totalEncryptedSupply(), userStartingBalance);
 
         vm.startPrank(user);
         InEuint128 memory balance = CFT.createInEuint128(1e5, user);
-        token.burnEncrypted(user, balance);
-        vm.stopPrank();
-
-        CFT.assertHashValue(token.encBalances(user), userStartingBalance - 1e5);
-        CFT.assertHashValue(token.totalEncryptedSupply(), userStartingBalance - 1e5);
-    }
-
-    function testEncryptedBurnEuint() public {
-        CFT.assertHashValue(token.encBalances(user), userStartingBalance);
-        CFT.assertHashValue(token.totalEncryptedSupply(), userStartingBalance);
-
-        vm.startPrank(user);
-        euint128 balance = FHE.asEuint128(1e5);
-
-        //since InEuint with user signature is not created, must allow token to use new balance
-        FHE.allow(balance, address(token)); 
         token.burnEncrypted(user, balance);
         vm.stopPrank();
 

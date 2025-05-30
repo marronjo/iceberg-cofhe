@@ -137,8 +137,10 @@ contract IcebergTest is Test, Fixtures {
         fheToken0.approve(address(manager), type(uint256).max);
         fheToken1.approve(address(manager), type(uint256).max);
 
-        fheToken0.mintEncrypted(address(hook), FHE.asEuint128(0));  //init value in mock storage
-        fheToken1.mintEncrypted(address(hook), FHE.asEuint128(0));  //init value in mock storage
+        InEuint128 memory amount = CFT.createInEuint128(0, user);
+
+        fheToken0.mintEncrypted(address(hook), amount);  //init value in mock storage
+        fheToken1.mintEncrypted(address(hook), amount);  //init value in mock storage
 
         vm.stopPrank();
 
