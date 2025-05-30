@@ -14,11 +14,9 @@ interface IFHERC20 is IERC20 {
 
     // -------- Encrypted Mint Functions --------
     function mintEncrypted(address user, InEuint128 memory amount) external;
-    function mintEncrypted(address user, euint128 amount) external;
 
     // -------- Encrypted Burn Functions --------
     function burnEncrypted(address user, InEuint128 memory amount) external;
-    function burnEncrypted(address user, euint128 amount) external;
 
     // -------- Encrypted Transfer Functions --------
     function transferFromEncrypted(address from, address to, InEuint128 memory amount) external returns (euint128);

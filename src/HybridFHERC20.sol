@@ -46,10 +46,6 @@ contract HybridFHERC20 is ERC20, IFHERC20 {
         _mintEnc(user, FHE.asEuint128(amount));
     }
 
-    function mintEncrypted(address user, euint128 amount) public {
-        _mintEnc(user, amount);
-    }
-
     function _mintEnc(address user, euint128 amount) internal {
         encBalances[user] = encBalances[user].add(amount);
         totalEncryptedSupply = totalEncryptedSupply.add(amount);
@@ -62,10 +58,6 @@ contract HybridFHERC20 is ERC20, IFHERC20 {
     // ----------- Encrypted Burn Functions -----------------
     function burnEncrypted(address user, InEuint128 memory amount) public {
         _burnEnc(user, FHE.asEuint128(amount));
-    }
-
-    function burnEncrypted(address user, euint128 amount) public {
-        _burnEnc(user, amount);
     }
 
     function _burnEnc(address user, euint128 amount) internal {
