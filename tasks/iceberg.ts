@@ -1,9 +1,10 @@
 import { task } from 'hardhat/config';
-import { cofhejs, Encryptable } from 'cofhejs/node';
-import { icebergAddress, poolKey } from './util/constants';
+import { cofhejs, Encryptable, FheTypes } from 'cofhejs/node';
+import { icebergAddress, poolKey, poolId } from './util/constants';
 import { initialiseCofheJs } from './util/common';
 
 import icebergAbi from '../artifacts/src/Iceberg.sol/Iceberg.json';
+import queueAbi from '../artifacts/src/Queue.sol/Queue.json';
 
 task('get-iceberg-permissions', 'get iceberg hook permissions').setAction(async(taskArgs, hre) => {
     const [signer] = await hre.ethers.getSigners();
@@ -71,4 +72,27 @@ task('place-iceberg-order', 'place encrypted iceberg order')
 
     console.log("Order placed successfully!");
     console.log("Transaction hash : " + tx.hash);
-}); 
+});
+
+task('get-pool-queue', 'get decryption queue for given pool').setAction(async (taskArgs, hre) => {
+    const [signer] = await hre.ethers.getSigners();
+
+    await initialiseCofheJs(signer);
+    const iceberg = new hre.ethers.Contract(icebergAddress, icebergAbi.abi, signer);
+
+    const queueAddress = await iceberg.poolQueue(poolId);
+    const queueContract = new hre.ethers.Contract(queueAddress, queueAbi.abi, signer);
+
+    let top, length: number = 0;
+    try{
+        top = await queueContract.peek();
+        length = await queueContract.length();
+    }catch(e){
+        console.error('Error: queue is empty');
+        return;
+    }
+
+    console.log('Length : ' + length);
+    console.log('Top of Queue : ' + top);
+    console.log('...Decrypted : ' + (await cofhejs.unseal(top, FheTypes.Uint128)));
+});
