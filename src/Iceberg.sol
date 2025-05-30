@@ -250,6 +250,10 @@ contract Iceberg is BaseHook {
             epochInfo.oneForZeroToken0 = FHE.add(epochInfo.oneForZeroToken0, FHE.asEuint128(amount0));
             epochInfo.oneForZeroToken1 = FHE.add(epochInfo.oneForZeroToken1, FHE.asEuint128(amount1));
         }
+
+        //add hook allowances
+        FHE.allowThis(epochInfo.zeroForOneToken0);
+        FHE.allowThis(epochInfo.zeroForOneToken1);
     }
 
     function placeIcebergOrder(PoolKey calldata key, int24 tickLower, InEbool calldata zeroForOne, InEuint128 calldata liquidity)
@@ -272,15 +276,18 @@ contract Iceberg is BaseHook {
         } else {
             epochInfo = encEpochInfos[epoch];
         }
-        
-        // unsure if this unchecked block has any affect on FHE computations
-        unchecked {
-            epochInfo.liquidityMapToken0[msg.sender] = FHE.select(_zeroForOne, FHE.add(epochInfo.liquidityMapToken0[msg.sender], _liquidity), epochInfo.liquidityMapToken0[msg.sender]);
-            epochInfo.liquidityMapToken1[msg.sender] = FHE.select(_zeroForOne, epochInfo.liquidityMapToken1[msg.sender], FHE.add(epochInfo.liquidityMapToken1[msg.sender], _liquidity));
 
-            epochInfo.zeroForOneLiquidity = FHE.select(_zeroForOne, FHE.add(epochInfo.zeroForOneLiquidity, _liquidity), epochInfo.zeroForOneLiquidity);
-            epochInfo.oneForZeroLiquidity = FHE.select(_zeroForOne, epochInfo.oneForZeroLiquidity, FHE.add(epochInfo.oneForZeroLiquidity, _liquidity));
-        }
+        epochInfo.liquidityMapToken0[msg.sender] = FHE.select(_zeroForOne, FHE.add(epochInfo.liquidityMapToken0[msg.sender], _liquidity), epochInfo.liquidityMapToken0[msg.sender]);
+        epochInfo.liquidityMapToken1[msg.sender] = FHE.select(_zeroForOne, epochInfo.liquidityMapToken1[msg.sender], FHE.add(epochInfo.liquidityMapToken1[msg.sender], _liquidity));
+
+        epochInfo.zeroForOneLiquidity = FHE.select(_zeroForOne, FHE.add(epochInfo.zeroForOneLiquidity, _liquidity), epochInfo.zeroForOneLiquidity);
+        epochInfo.oneForZeroLiquidity = FHE.select(_zeroForOne, epochInfo.oneForZeroLiquidity, FHE.add(epochInfo.oneForZeroLiquidity, _liquidity));
+
+        //add allowances for hook
+        FHE.allowThis(epochInfo.liquidityMapToken0[msg.sender]);
+        FHE.allowThis(epochInfo.liquidityMapToken1[msg.sender]);
+        FHE.allowThis(epochInfo.zeroForOneLiquidity);
+        FHE.allowThis(epochInfo.oneForZeroLiquidity);
 
         euint128 token0Amount = FHE.select(_zeroForOne, _liquidity, ZERO);
         euint128 token1Amount = FHE.select(_zeroForOne, ZERO, _liquidity);
@@ -336,9 +343,10 @@ contract Iceberg is BaseHook {
             //request unwrap of order amount from coprocessor
             address token = zeroForOne ? address(Currency.unwrap(key.currency0)) : address(Currency.unwrap(key.currency1));
 
-            FHE.allowThis(liquidityTotal); //add allow for hook contract
             FHE.allow(liquidityTotal, token);
             euint128 liquidityHandle = IFHERC20(token).requestUnwrap(address(this), liquidityTotal);
+
+            FHE.allowThis(liquidityHandle);
 
             //add order key to decryption queue
             //to be queried in beforeSwap hook before next swap takes place
