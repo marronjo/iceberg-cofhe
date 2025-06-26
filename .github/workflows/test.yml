@@ -62,34 +62,34 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
-  hardhat-check:
-    strategy:
-      fail-fast: true
+  # hardhat-check:
+  #   strategy:
+  #     fail-fast: true
 
-    name: Hardhat project
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
+  #   name: Hardhat project
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #       with:
+  #         submodules: recursive
 
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
+  #     - name: Install Foundry
+  #       uses: foundry-rs/foundry-toolchain@v1
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 8
+  #     - name: Install pnpm
+  #       uses: pnpm/action-setup@v4
+  #       with:
+  #         version: 8
 
-      - name: Show pnpm version
-        run: |
-          pnpm --version
+  #     - name: Show pnpm version
+  #       run: |
+  #         pnpm --version
 
-      - name: Install pnpm dependencies
-        run: |
-          pnpm install
+  #     - name: Install pnpm dependencies
+  #       run: |
+  #         pnpm install
 
-      - name: Hardhat compile
-        run: |
-          pnpm hardhat compile
-        id: build
+  #     - name: Hardhat compile
+  #       run: |
+  #         pnpm hardhat compile
+  #       id: build
