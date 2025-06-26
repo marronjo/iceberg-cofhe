@@ -7,7 +7,6 @@ fs_permissions = [{ access = "read-write", path = ".forge-snapshots/"}]
 solc_version = "0.8.26"
 evm_version = "cancun"
 auto_detect_remappings = false
-isolate = true
 
 optimizer = true
 optimizer_runs = 999_999
