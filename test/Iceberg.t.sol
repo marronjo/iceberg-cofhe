@@ -34,16 +34,13 @@ import {HookMock} from "./HookMock.sol";
 import {FHE, euint128, euint128, euint32, ebool, InEuint128, InEuint32, InEbool} from "@fhenixprotocol/cofhe-contracts/FHE.sol";
 import {IFHERC20} from "../src/interface/IFHERC20.sol";
 import {HybridFHERC20} from "../src/HybridFHERC20.sol";
-import {CoFheTest} from "@fhenixprotocol/cofhe-foundry-mocks/CoFheTest.sol";
+import {CoFheTest} from "@fhenixprotocol/cofhe-mock-contracts/CoFheTest.sol";
 
-contract IcebergTest is Test, Fixtures {
+contract IcebergTest is Test, Fixtures, CoFheTest {
     using EasyPosm for IPositionManager;
     using PoolIdLibrary for PoolKey;
     using CurrencyLibrary for Currency;
     using StateLibrary for IPoolManager;
-
-    //test instance with useful utilities for testing FHE contracts locally
-    CoFheTest CFT;
 
     address private user = makeAddr("user");
     address private user2 = makeAddr("user2");
@@ -66,8 +63,6 @@ contract IcebergTest is Test, Fixtures {
     uint160 constant SQRT_RATIO_10_1 = 250541448375047931186413801569;
 
     function setUp() public {
-        //initialise new CoFheTest instance with logging turned on
-        CFT = new CoFheTest(true);
         address a0 = address(123);
         address a1 = address(456);
 
@@ -142,7 +137,7 @@ contract IcebergTest is Test, Fixtures {
         fheToken0.approve(address(manager), type(uint256).max);
         fheToken1.approve(address(manager), type(uint256).max);
 
-        InEuint128 memory amount = CFT.createInEuint128(0, user);
+        InEuint128 memory amount = createInEuint128(0, user);
 
         fheToken0.mintEncrypted(address(hook), amount);  //init value in mock storage
         fheToken1.mintEncrypted(address(hook), amount);  //init value in mock storage
@@ -150,7 +145,7 @@ contract IcebergTest is Test, Fixtures {
         vm.stopPrank();
 
         vm.startPrank(user2);
-        InEuint128 memory amountUser2 = CFT.createInEuint128(2 ** 120, user2);
+        InEuint128 memory amountUser2 = createInEuint128(2 ** 120, user2);
 
         fheToken0.mintEncrypted(user2, amountUser2);
         fheToken1.mintEncrypted(user2, amountUser2);
@@ -170,8 +165,8 @@ contract IcebergTest is Test, Fixtures {
         //-----------------------------------------------
 
         int24 lower = 0;
-        InEbool memory zeroForOne = CFT.createInEbool(true, user);
-        InEuint128 memory liquidity = CFT.createInEuint128(1000000, user);
+        InEbool memory zeroForOne = createInEbool(true, user);
+        InEuint128 memory liquidity = createInEuint128(1000000, user);
 
         euint128 userBalanceBeforeToken0 = fheToken0.encBalances(user);
         euint128 userBalanceBeforeToken1 = fheToken1.encBalances(user);
@@ -192,14 +187,14 @@ contract IcebergTest is Test, Fixtures {
         // user balance assertions
         // user should send 1000000 token0
         // token1 balance should be the same as before
-        CFT.assertHashValue(userBalanceBeforeToken0, _mockStorageHelper(userBalanceAfterToken0) + 1000000);
-        CFT.assertHashValue(userBalanceBeforeToken1, _mockStorageHelper(userBalanceAfterToken1));
+        assertHashValue(userBalanceBeforeToken0, _mockStorageHelper(userBalanceAfterToken0) + 1000000);
+        assertHashValue(userBalanceBeforeToken1, _mockStorageHelper(userBalanceAfterToken1));
 
         // hook balance assertions
         // hook should receive 1000000 token0
         // token1 balance should be the same as before
-        CFT.assertHashValue(hookBalanceBeforeToken0, _mockStorageHelper(hookBalanceAfterToken0) - 1000000);
-        CFT.assertHashValue(hookBalanceBeforeToken1, _mockStorageHelper(hookBalanceAfterToken1));
+        assertHashValue(hookBalanceBeforeToken0, _mockStorageHelper(hookBalanceAfterToken0) - 1000000);
+        assertHashValue(hookBalanceBeforeToken1, _mockStorageHelper(hookBalanceAfterToken1));
 
         //-----------------------------------------------
         //                                              
@@ -231,9 +226,9 @@ contract IcebergTest is Test, Fixtures {
         assertFalse(fill0);
         assertEq(Currency.unwrap(curr0), Currency.unwrap(key.currency0));
         assertEq(Currency.unwrap(curr1), Currency.unwrap(key.currency1));
-        CFT.assertHashValue(zeroForOneTotal, 1000000);                              //zeroForOne liquidity should be 1000000 from iceberg order above
-        CFT.assertHashValue(oneForZeroTotal, 0);                                    //oneForZero liquidity should be 0
-        CFT.assertHashValue(hook.getUserLiquidity(key, user, 0, true), 1000000);    //user total should be 1000000 since no other orders
+        assertHashValue(zeroForOneTotal, 1000000);                              //zeroForOne liquidity should be 1000000 from iceberg order above
+        assertHashValue(oneForZeroTotal, 0);                                    //oneForZero liquidity should be 0
+        assertHashValue(hook.getUserLiquidity(key, user, 0, true), 1000000);    //user total should be 1000000 since no other orders
 
         //-----------------------------------------------
         //                                              
@@ -251,7 +246,7 @@ contract IcebergTest is Test, Fixtures {
         //look at value at top of queue
         euint128 top = queue.peek();
 
-        CFT.assertHashValue(top, 1000000);
+        assertHashValue(top, 1000000);
 
         (
             bool orderZeroForOne,
@@ -352,8 +347,8 @@ contract IcebergTest is Test, Fixtures {
         //-----------------------------------------------
 
         int24 lower = 0;
-        InEbool memory zeroForOne = CFT.createInEbool(false, user);
-        InEuint128 memory liquidity = CFT.createInEuint128(1000000, user);
+        InEbool memory zeroForOne = createInEbool(false, user);
+        InEuint128 memory liquidity = createInEuint128(1000000, user);
 
         euint128 userBalanceBeforeToken0 = fheToken0.encBalances(user);
         euint128 userBalanceBeforeToken1 = fheToken1.encBalances(user);
@@ -374,14 +369,14 @@ contract IcebergTest is Test, Fixtures {
         // user balance assertions
         // user should send 1000000 token1
         // token0 balance should be the same as before
-        CFT.assertHashValue(userBalanceBeforeToken0, _mockStorageHelper(userBalanceAfterToken0));
-        CFT.assertHashValue(userBalanceBeforeToken1, _mockStorageHelper(userBalanceAfterToken1) + 1000000);
+        assertHashValue(userBalanceBeforeToken0, _mockStorageHelper(userBalanceAfterToken0));
+        assertHashValue(userBalanceBeforeToken1, _mockStorageHelper(userBalanceAfterToken1) + 1000000);
 
         // hook balance assertions
         // hook should receive 1000000 token1
         // token10 balance should be the same as before
-        CFT.assertHashValue(hookBalanceBeforeToken0, _mockStorageHelper(hookBalanceAfterToken0));
-        CFT.assertHashValue(hookBalanceBeforeToken1, _mockStorageHelper(hookBalanceAfterToken1) - 1000000);
+        assertHashValue(hookBalanceBeforeToken0, _mockStorageHelper(hookBalanceAfterToken0));
+        assertHashValue(hookBalanceBeforeToken1, _mockStorageHelper(hookBalanceAfterToken1) - 1000000);
 
         //-----------------------------------------------
         //                                              
@@ -413,9 +408,9 @@ contract IcebergTest is Test, Fixtures {
         assertFalse(fill0);
         assertEq(Currency.unwrap(curr0), Currency.unwrap(key.currency0));
         assertEq(Currency.unwrap(curr1), Currency.unwrap(key.currency1));
-        CFT.assertHashValue(zeroForOneTotal, 0);                                //zeroForOne liquidity should be 0
-        CFT.assertHashValue(oneForZeroTotal, 1000000);                          //oneForZero liquidity should be 1000000
-        CFT.assertHashValue(hook.getUserLiquidity(key, user, 0, false), 1000000);//user total should be 1000000 since no other orders
+        assertHashValue(zeroForOneTotal, 0);                                //zeroForOne liquidity should be 0
+        assertHashValue(oneForZeroTotal, 1000000);                          //oneForZero liquidity should be 1000000
+        assertHashValue(hook.getUserLiquidity(key, user, 0, false), 1000000);//user total should be 1000000 since no other orders
 
         //-----------------------------------------------
         //                                              
@@ -433,7 +428,7 @@ contract IcebergTest is Test, Fixtures {
         //look at value at top of queue
         euint128 top = queue.peek();
 
-        CFT.assertHashValue(top, 1000000);
+        assertHashValue(top, 1000000);
 
         (
             bool orderZeroForOne,
@@ -523,11 +518,11 @@ contract IcebergTest is Test, Fixtures {
 
     function test2IcebergOrdersFilledSameEpoch() public {
         int24 lower = 0;
-        InEbool memory zeroForOne = CFT.createInEbool(true, user);
-        InEuint128 memory liquidity1 = CFT.createInEuint128(1000000, user);
+        InEbool memory zeroForOne = createInEbool(true, user);
+        InEuint128 memory liquidity1 = createInEuint128(1000000, user);
 
-        InEbool memory zeroForOne2 = CFT.createInEbool(true, user2);
-        InEuint128 memory liquidity2 = CFT.createInEuint128(5000000, user2);
+        InEbool memory zeroForOne2 = createInEbool(true, user2);
+        InEuint128 memory liquidity2 = createInEuint128(5000000, user2);
 
         euint128 userBalanceBeforeToken0 = fheToken0.encBalances(user);
         euint128 userBalanceBeforeToken1 = fheToken1.encBalances(user);
@@ -558,20 +553,20 @@ contract IcebergTest is Test, Fixtures {
         // user balance assertions
         // user should send 1000000 token0
         // token1 balance should be the same as before
-        CFT.assertHashValue(userBalanceBeforeToken0, _mockStorageHelper(userBalanceAfterToken0) + 1000000);
-        CFT.assertHashValue(userBalanceBeforeToken1, _mockStorageHelper(userBalanceAfterToken1));
+        assertHashValue(userBalanceBeforeToken0, _mockStorageHelper(userBalanceAfterToken0) + 1000000);
+        assertHashValue(userBalanceBeforeToken1, _mockStorageHelper(userBalanceAfterToken1));
 
         // user2 balance assertions
         // user should send 5000000 token0
         // token1 balance should be the same as before
-        CFT.assertHashValue(user2BalanceBeforeToken0, _mockStorageHelper(user2BalanceAfterToken0) + 5000000);
-        CFT.assertHashValue(user2BalanceBeforeToken1, _mockStorageHelper(user2BalanceAfterToken1));
+        assertHashValue(user2BalanceBeforeToken0, _mockStorageHelper(user2BalanceAfterToken0) + 5000000);
+        assertHashValue(user2BalanceBeforeToken1, _mockStorageHelper(user2BalanceAfterToken1));
 
         // hook balance assertions
         // hook should receive 6000000 token0
         // token1 balance should be the same as before
-        CFT.assertHashValue(hookBalanceBeforeToken0, _mockStorageHelper(hookBalanceAfterToken0) - 6000000);
-        CFT.assertHashValue(hookBalanceBeforeToken1, _mockStorageHelper(hookBalanceAfterToken1));
+        assertHashValue(hookBalanceBeforeToken0, _mockStorageHelper(hookBalanceAfterToken0) - 6000000);
+        assertHashValue(hookBalanceBeforeToken1, _mockStorageHelper(hookBalanceAfterToken1));
 
         //-----------------------------------------------
         //                                              
@@ -603,10 +598,10 @@ contract IcebergTest is Test, Fixtures {
         assertFalse(fill0);
         assertEq(Currency.unwrap(curr0), Currency.unwrap(key.currency0));
         assertEq(Currency.unwrap(curr1), Currency.unwrap(key.currency1));
-        CFT.assertHashValue(zeroForOneTotal, 6000000);                              //zeroForOne liquidity should be 6000000 from iceberg order above
-        CFT.assertHashValue(oneForZeroTotal, 0);                                    //oneForZero liquidity should be 0
-        CFT.assertHashValue(hook.getUserLiquidity(key, user, 0, true), 1000000);    //user total should be 1000000
-        CFT.assertHashValue(hook.getUserLiquidity(key, user2, 0, true), 5000000);   //user2 total should be 5000000
+        assertHashValue(zeroForOneTotal, 6000000);                              //zeroForOne liquidity should be 6000000 from iceberg order above
+        assertHashValue(oneForZeroTotal, 0);                                    //oneForZero liquidity should be 0
+        assertHashValue(hook.getUserLiquidity(key, user, 0, true), 1000000);    //user total should be 1000000
+        assertHashValue(hook.getUserLiquidity(key, user2, 0, true), 5000000);   //user2 total should be 5000000
 
         //-----------------------------------------------
         //                                              
@@ -624,7 +619,7 @@ contract IcebergTest is Test, Fixtures {
         //look at value at top of queue
         euint128 top = queue.peek();
 
-        CFT.assertHashValue(top, 6000000);  //6000000 liquidity at top of decryption queue
+        assertHashValue(top, 6000000);  //6000000 liquidity at top of decryption queue
 
         (
             bool orderZeroForOne,
@@ -725,8 +720,8 @@ contract IcebergTest is Test, Fixtures {
         //-----------------------------------------------
 
         int24 lower = 0;
-        InEbool memory zeroForOne = CFT.createInEbool(true, user);
-        InEuint128 memory liquidity = CFT.createInEuint128(1000000, user);
+        InEbool memory zeroForOne = createInEbool(true, user);
+        InEuint128 memory liquidity = createInEuint128(1000000, user);
 
         euint128 userBalanceBeforeToken0 = fheToken0.encBalances(user);
         euint128 userBalanceBeforeToken1 = fheToken1.encBalances(user);
@@ -747,14 +742,14 @@ contract IcebergTest is Test, Fixtures {
         // user balance assertions
         // user should send 1000000 token0
         // token1 balance should be the same as before
-        CFT.assertHashValue(userBalanceBeforeToken0, _mockStorageHelper(userBalanceAfterToken0) + 1000000);
-        CFT.assertHashValue(userBalanceBeforeToken1, _mockStorageHelper(userBalanceAfterToken1));
+        assertHashValue(userBalanceBeforeToken0, _mockStorageHelper(userBalanceAfterToken0) + 1000000);
+        assertHashValue(userBalanceBeforeToken1, _mockStorageHelper(userBalanceAfterToken1));
 
         // hook balance assertions
         // hook should receive 1000000 token0
         // token1 balance should be the same as before
-        CFT.assertHashValue(hookBalanceBeforeToken0, _mockStorageHelper(hookBalanceAfterToken0) - 1000000);
-        CFT.assertHashValue(hookBalanceBeforeToken1, _mockStorageHelper(hookBalanceAfterToken1));
+        assertHashValue(hookBalanceBeforeToken0, _mockStorageHelper(hookBalanceAfterToken0) - 1000000);
+        assertHashValue(hookBalanceBeforeToken1, _mockStorageHelper(hookBalanceAfterToken1));
 
         //-----------------------------------------------
         //                                              
@@ -786,9 +781,9 @@ contract IcebergTest is Test, Fixtures {
         assertFalse(fill0);
         assertEq(Currency.unwrap(curr0), Currency.unwrap(key.currency0));
         assertEq(Currency.unwrap(curr1), Currency.unwrap(key.currency1));
-        CFT.assertHashValue(zeroForOneTotal, 1000000);                              //zeroForOne liquidity should be 1000000 from iceberg order above
-        CFT.assertHashValue(oneForZeroTotal, 0);                                    //oneForZero liquidity should be 0
-        CFT.assertHashValue(hook.getUserLiquidity(key, user, 0, true), 1000000);    //user total should be 1000000 since no other orders
+        assertHashValue(zeroForOneTotal, 1000000);                              //zeroForOne liquidity should be 1000000 from iceberg order above
+        assertHashValue(oneForZeroTotal, 0);                                    //oneForZero liquidity should be 0
+        assertHashValue(hook.getUserLiquidity(key, user, 0, true), 1000000);    //user total should be 1000000 since no other orders
 
         //-----------------------------------------------
         //                                              
@@ -806,7 +801,7 @@ contract IcebergTest is Test, Fixtures {
         //look at value at top of queue
         euint128 top = queue.peek();
 
-        CFT.assertHashValue(top, 1000000);
+        assertHashValue(top, 1000000);
 
         (
             bool orderZeroForOne,
@@ -892,8 +887,8 @@ contract IcebergTest is Test, Fixtures {
         euint128 userBalanceBefore1 = fheToken1.encBalances(user);
 
         int24 lower = 0;
-        InEbool memory zeroForOne = CFT.createInEbool(true, user);
-        InEuint128 memory liquidity = CFT.createInEuint128(100, user);
+        InEbool memory zeroForOne = createInEbool(true, user);
+        InEuint128 memory liquidity = createInEuint128(100, user);
 
         vm.prank(user);
         hook.placeIcebergOrder(key, lower, zeroForOne, liquidity);
@@ -903,15 +898,15 @@ contract IcebergTest is Test, Fixtures {
         // user sends hook token0 e.g. swap token0 for token1
         // fheToken0 : user -> hook encrypted 0
         // fheToken1 : user -> hook encrypted 100
-        CFT.assertHashValue(fheToken0.encBalances(address(hook)), 100);
-        CFT.assertHashValue(fheToken1.encBalances(address(hook)), 0);
+        assertHashValue(fheToken0.encBalances(address(hook)), 100);
+        assertHashValue(fheToken1.encBalances(address(hook)), 0);
 
-        uint256 userBalanceAfter0 = CFT.mockStorage(euint128.unwrap(fheToken0.encBalances(user)));
-        uint256 userBalanceAfter1 = CFT.mockStorage(euint128.unwrap(fheToken1.encBalances(user)));
+        uint256 userBalanceAfter0 = mockStorage(euint128.unwrap(fheToken0.encBalances(user)));
+        uint256 userBalanceAfter1 = mockStorage(euint128.unwrap(fheToken1.encBalances(user)));
 
         // token0 balance after should be 100 tokens less than balance before
-        CFT.assertHashValue(userBalanceBefore0, uint128(userBalanceAfter0 + 100));
-        CFT.assertHashValue(userBalanceBefore1, uint128(userBalanceAfter1));
+        assertHashValue(userBalanceBefore0, uint128(userBalanceAfter0 + 100));
+        assertHashValue(userBalanceBefore1, uint128(userBalanceAfter1));
     }
 
     function testPlaceIcebergOrderToken1() public {
@@ -919,8 +914,8 @@ contract IcebergTest is Test, Fixtures {
         euint128 userBalanceBefore1 = fheToken1.encBalances(user);
 
         int24 lower = 0;
-        InEbool memory zeroForOne = CFT.createInEbool(false, user);
-        InEuint128 memory liquidity = CFT.createInEuint128(100, user);
+        InEbool memory zeroForOne = createInEbool(false, user);
+        InEuint128 memory liquidity = createInEuint128(100, user);
 
         vm.prank(user);
         hook.placeIcebergOrder(key, lower, zeroForOne, liquidity);
@@ -930,21 +925,21 @@ contract IcebergTest is Test, Fixtures {
         // user sends hook token1 e.g. swap token1 for token0
         // fheToken0 : user -> hook encrypted 0
         // fheToken1 : user -> hook encrypted 100
-        CFT.assertHashValue(fheToken0.encBalances(address(hook)), 0);
-        CFT.assertHashValue(fheToken1.encBalances(address(hook)), 100);
+        //assertHashValue(fheToken0.encBalances(address(hook)), 0);
+        assertHashValue(fheToken1.encBalances(address(hook)), 100);
 
-        uint256 userBalanceAfter0 = CFT.mockStorage(euint128.unwrap(fheToken0.encBalances(user)));
-        uint256 userBalanceAfter1 = CFT.mockStorage(euint128.unwrap(fheToken1.encBalances(user)));
+        uint256 userBalanceAfter0 = mockStorage(euint128.unwrap(fheToken0.encBalances(user)));
+        uint256 userBalanceAfter1 = mockStorage(euint128.unwrap(fheToken1.encBalances(user)));
 
-        CFT.assertHashValue(userBalanceBefore0, uint128(userBalanceAfter0));
+        assertHashValue(userBalanceBefore0, uint128(userBalanceAfter0));
         // token1 balance after should be 100 tokens less than balance before
-        CFT.assertHashValue(userBalanceBefore1, uint128(userBalanceAfter1 + 100));
+        assertHashValue(userBalanceBefore1, uint128(userBalanceAfter1 + 100));
     }
 
     function testQueueZeroAfterPlaceIcebergOrder() public {
         int24 lower = 60;
-        InEbool memory zeroForOne = CFT.createInEbool(false, user);
-        InEuint128 memory liquidity = CFT.createInEuint128(100, user);
+        InEbool memory zeroForOne = createInEbool(false, user);
+        InEuint128 memory liquidity = createInEuint128(100, user);
 
         vm.prank(user);
         hook.placeIcebergOrder(key, lower, zeroForOne, liquidity);
@@ -972,8 +967,8 @@ contract IcebergTest is Test, Fixtures {
 
     function testExistsAfterPlaceIcebergOrderZeroForOne() public {
         int24 lower = 0;
-        InEbool memory zeroForOne = CFT.createInEbool(true, user);
-        InEuint128 memory liquidity = CFT.createInEuint128(1000000, user);
+        InEbool memory zeroForOne = createInEbool(true, user);
+        InEuint128 memory liquidity = createInEuint128(1000000, user);
 
         //user places limit order at given tick lower
         vm.prank(user);
@@ -1000,9 +995,9 @@ contract IcebergTest is Test, Fixtures {
         assertFalse(fill1);
         assertEq(Currency.unwrap(curr0), Currency.unwrap(key.currency0));
         assertEq(Currency.unwrap(curr1), Currency.unwrap(key.currency1));
-        CFT.assertHashValue(zeroForOneTotal, 1000000);                                     //zeroForOne liquidity should be 1000000 from iceberg order above
-        CFT.assertHashValue(oneForZeroTotal, 0);                                           //oneForZero liquidity should be 0
-        CFT.assertHashValue(hook.getUserLiquidity(key, user, 0, true), 1000000);           //total should be 1000000 since no other orders
+        assertHashValue(zeroForOneTotal, 1000000);                                     //zeroForOne liquidity should be 1000000 from iceberg order above
+        assertHashValue(oneForZeroTotal, 0);                                           //oneForZero liquidity should be 0
+        assertHashValue(hook.getUserLiquidity(key, user, 0, true), 1000000);           //total should be 1000000 since no other orders
 
         Queue queue = hook.poolQueue(keccak256(abi.encode(key)));
         assertFalse(queue.isEmpty());
@@ -1010,7 +1005,7 @@ contract IcebergTest is Test, Fixtures {
 
         euint128 top = queue.peek();
 
-        CFT.assertHashValue(top, 1000000);
+        assertHashValue(top, 1000000);
 
         (
             bool orderZeroForOne,
@@ -1025,8 +1020,8 @@ contract IcebergTest is Test, Fixtures {
 
     function testExistsAfterPlaceIcebergOrderOneForZero() public {
         int24 lower = 0;
-        InEbool memory zeroForOne = CFT.createInEbool(false, user);
-        InEuint128 memory liquidity = CFT.createInEuint128(987654321, user);
+        InEbool memory zeroForOne = createInEbool(false, user);
+        InEuint128 memory liquidity = createInEuint128(987654321, user);
 
         //user places limit order at given tick lower
         vm.prank(user);
@@ -1052,16 +1047,16 @@ contract IcebergTest is Test, Fixtures {
         assertFalse(fill1);
         assertEq(Currency.unwrap(curr0), Currency.unwrap(key.currency0));
         assertEq(Currency.unwrap(curr1), Currency.unwrap(key.currency1));
-        CFT.assertHashValue(zeroForOneTotal, 0);                  //zeroForOne liquidity should be 0
-        CFT.assertHashValue(oneForZeroTotal, 987654321);           //oneForZero liquidity should be 987654321 from iceberg order above
-        CFT.assertHashValue(hook.getUserLiquidity(key, user, 0, false), 987654321);         //total should be 987654321 since no other orders
+        assertHashValue(zeroForOneTotal, 0);                  //zeroForOne liquidity should be 0
+        assertHashValue(oneForZeroTotal, 987654321);           //oneForZero liquidity should be 987654321 from iceberg order above
+        assertHashValue(hook.getUserLiquidity(key, user, 0, false), 987654321);         //total should be 987654321 since no other orders
 
         Queue queue = hook.poolQueue(keccak256(abi.encode(key)));
         assertFalse(queue.isEmpty());
 
         euint128 top = queue.peek();
 
-        CFT.assertHashValue(top, 987654321);
+        assertHashValue(top, 987654321);
 
         (
             bool orderZeroForOne,
@@ -1078,8 +1073,8 @@ contract IcebergTest is Test, Fixtures {
     // --------------- Helper Functions ------------------
     //
     function placeIcebergOrder(int24 _lower, bool _zeroForOne, uint128 _liquidity) private returns(ebool, euint128) {
-        InEbool memory zeroForOne = CFT.createInEbool(_zeroForOne, user);
-        InEuint128 memory liquidity = CFT.createInEuint128(_liquidity, user);
+        InEbool memory zeroForOne = createInEbool(_zeroForOne, user);
+        InEuint128 memory liquidity = createInEuint128(_liquidity, user);
 
         hook.placeIcebergOrder(key, _lower, zeroForOne, liquidity);
 
@@ -1122,8 +1117,8 @@ contract IcebergTest is Test, Fixtures {
         IFHERC20(token).mint(user, 2 ** 250);
         IFHERC20(token).mint(address(this), 2 ** 250);
 
-        //InEuint128 memory amount = CFT.createInEuint128(2 ** 120, address(this));
-        InEuint128 memory amountUser = CFT.createInEuint128(2 ** 120, user);
+        //InEuint128 memory amount = createInEuint128(2 ** 120, address(this));
+        InEuint128 memory amountUser = createInEuint128(2 ** 120, user);
 
         //IFHERC20(token).mintEncrypted(address(this), amount);
         IFHERC20(token).mintEncrypted(user, amountUser);
@@ -1153,11 +1148,11 @@ contract IcebergTest is Test, Fixtures {
 
     // help with easier to read test assertions
     function _mockStorageHelper(euint128 value) private view returns(uint128){
-        return uint128(CFT.mockStorage(euint128.unwrap(value)));
+        return uint128(mockStorage(euint128.unwrap(value)));
     }
 
     function _mockStorageHelper(ebool value) private view returns(bool){
-        return CFT.mockStorage(ebool.unwrap(value)) == 1 ? true : false;
+        return mockStorage(ebool.unwrap(value)) == 1 ? true : false;
     }
 
     // fetch evalues from mock storage and compare plaintext

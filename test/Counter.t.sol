@@ -26,18 +26,15 @@ import {Fixtures} from "./utils/Fixtures.sol";
 
 //FHE Imports
 import {FHE, InEuint128, euint128} from "@fhenixprotocol/cofhe-contracts/FHE.sol";
-import {CoFheTest} from "@fhenixprotocol/cofhe-foundry-mocks/CoFheTest.sol";
+import {CoFheTest} from "@fhenixprotocol/cofhe-mock-contracts/CoFheTest.sol";
 import {HybridFHERC20} from "../src/HybridFHERC20.sol";
 import {IFHERC20} from "../src/interface/IFHERC20.sol";
 
-contract CounterTest is Test, Fixtures {
+contract CounterTest is Test, Fixtures, CoFheTest {
     using EasyPosm for IPositionManager;
     using PoolIdLibrary for PoolKey;
     using CurrencyLibrary for Currency;
     using StateLibrary for IPoolManager;
-
-    //test instance with useful utilities for testing FHE contracts locally
-    CoFheTest CFT;
 
     Counter hook;
     PoolId poolId;
@@ -55,8 +52,8 @@ contract CounterTest is Test, Fixtures {
     address private user = makeAddr("user");
 
     function setUp() public {
-        //initialise new CoFheTest instance with logging turned off
-        CFT = new CoFheTest(false);
+        //initialise new CoFheTest instance with logging turned on
+        //setLog(true)
 
         bytes memory token0Args = abi.encode("TOKEN0", "TOK0");
         deployCodeTo("HybridFHERC20.sol:HybridFHERC20", token0Args, address(123));
@@ -129,7 +126,7 @@ contract CounterTest is Test, Fixtures {
 
     function testCounterHooks() public {
         // positions were created in setup()
-        CFT.assertHashValue(hook.beforeAddLiquidityCount(poolId), 1);
+        assertHashValue(hook.beforeAddLiquidityCount(poolId), 1);
 
         // Perform a test swap //
         bool zeroForOne = true;
@@ -141,14 +138,14 @@ contract CounterTest is Test, Fixtures {
 
         assertEq(int256(swapDelta.amount0()), amountSpecified);
 
-        CFT.assertHashValue(hook.beforeSwapCount(poolId), 1);
-        CFT.assertHashValue(hook.afterSwapCount(poolId), 1);
+        assertHashValue(hook.beforeSwapCount(poolId), 1);
+        assertHashValue(hook.afterSwapCount(poolId), 1);
     }
 
     function testLiquidityHooks() public {
         // positions were created in setup()
-        CFT.assertHashValue(hook.beforeAddLiquidityCount(poolId), 1);
-        //CFT.assertHashValue(hook.beforeRemoveLiquidityCount(poolId), 0);
+        assertHashValue(hook.beforeAddLiquidityCount(poolId), 1);
+        //assertHashValue(hook.beforeRemoveLiquidityCount(poolId), 0);
 
         // remove liquidity
         uint256 liquidityToRemove = 1e18;
@@ -162,8 +159,8 @@ contract CounterTest is Test, Fixtures {
             ZERO_BYTES
         );
 
-        CFT.assertHashValue(hook.beforeAddLiquidityCount(poolId), 1);
-        CFT.assertHashValue(hook.beforeRemoveLiquidityCount(poolId), 1);
+        assertHashValue(hook.beforeAddLiquidityCount(poolId), 1);
+        assertHashValue(hook.beforeRemoveLiquidityCount(poolId), 1);
     }
 
     //
@@ -182,8 +179,8 @@ contract CounterTest is Test, Fixtures {
         IFHERC20(token).mint(user, 2 ** 250);
         IFHERC20(token).mint(address(this), 2 ** 250);
 
-        //InEuint128 memory amount = CFT.createInEuint128(2 ** 120, address(this));
-        InEuint128 memory amountUser = CFT.createInEuint128(2 ** 120, user);
+        //InEuint128 memory amount = createInEuint128(2 ** 120, address(this));
+        InEuint128 memory amountUser = createInEuint128(2 ** 120, user);
 
         //IFHERC20(token).mintEncrypted(address(this), amount);
         IFHERC20(token).mintEncrypted(user, amountUser);

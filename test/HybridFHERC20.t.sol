@@ -4,15 +4,13 @@ pragma solidity ^0.8.24;
 //Foundry Imports
 import "forge-std/Test.sol";
 import {HybridFHERC20} from "../src/HybridFHERC20.sol";
-import {CoFheTest} from "@fhenixprotocol/cofhe-foundry-mocks/CoFheTest.sol";
+import {CoFheTest} from "@fhenixprotocol/cofhe-mock-contracts/CoFheTest.sol";
 import {FHE, euint128, InEuint128} from "@fhenixprotocol/cofhe-contracts/FHE.sol";
 
 
-contract HybridFHERC20Test is Test {
+contract HybridFHERC20Test is Test, CoFheTest {
 
     HybridFHERC20 private token;
-
-    CoFheTest private CFT;
 
     address private user = makeAddr("user");
     address private user2 = makeAddr("user2");
@@ -22,7 +20,6 @@ contract HybridFHERC20Test is Test {
     uint128 user2StartingBalance = 0;
 
     function setUp() public {
-        CFT = new CoFheTest(true);
         token = new HybridFHERC20("TEST", "TST");
 
         vm.label(user, "user");
@@ -31,12 +28,12 @@ contract HybridFHERC20Test is Test {
         vm.startPrank(user);
         token.mint(user, userStartingBalance);
         
-        InEuint128 memory balance = CFT.createInEuint128(uint128(userStartingBalance), user);
+        InEuint128 memory balance = createInEuint128(uint128(userStartingBalance), user);
         token.mintEncrypted(user, balance);
         vm.stopPrank();
 
         vm.startPrank(user2);
-        InEuint128 memory balance2 = CFT.createInEuint128(uint128(user2StartingBalance), user2);
+        InEuint128 memory balance2 = createInEuint128(uint128(user2StartingBalance), user2);
         token.mintEncrypted(user2, balance2);  //init value in mock storage
         vm.stopPrank();
     }
@@ -60,53 +57,53 @@ contract HybridFHERC20Test is Test {
     }
 
     function testEncryptedMintInEuint() public {
-        CFT.assertHashValue(token.encBalances(user), userStartingBalance);
-        CFT.assertHashValue(token.totalEncryptedSupply(), userStartingBalance);
+        assertHashValue(token.encBalances(user), userStartingBalance);
+        assertHashValue(token.totalEncryptedSupply(), userStartingBalance);
 
         vm.startPrank(user);
-        InEuint128 memory balance = CFT.createInEuint128(1e5, user);
+        InEuint128 memory balance = createInEuint128(1e5, user);
         token.mintEncrypted(user, balance);
         vm.stopPrank();
 
-        CFT.assertHashValue(token.encBalances(user), userStartingBalance + 1e5);
+        assertHashValue(token.encBalances(user), userStartingBalance + 1e5);
         //one holder, therefore user balance same as total encrypted supply
-        CFT.assertHashValue(token.totalEncryptedSupply(), userStartingBalance + 1e5);
+        assertHashValue(token.totalEncryptedSupply(), userStartingBalance + 1e5);
     }
 
     function testEncryptedBurnInEuint() public {
-        CFT.assertHashValue(token.encBalances(user), userStartingBalance);
-        CFT.assertHashValue(token.totalEncryptedSupply(), userStartingBalance);
+        assertHashValue(token.encBalances(user), userStartingBalance);
+        assertHashValue(token.totalEncryptedSupply(), userStartingBalance);
 
         vm.startPrank(user);
-        InEuint128 memory balance = CFT.createInEuint128(1e5, user);
+        InEuint128 memory balance = createInEuint128(1e5, user);
         token.burnEncrypted(user, balance);
         vm.stopPrank();
 
-        CFT.assertHashValue(token.encBalances(user), userStartingBalance - 1e5);
-        CFT.assertHashValue(token.totalEncryptedSupply(), userStartingBalance - 1e5);
+        assertHashValue(token.encBalances(user), userStartingBalance - 1e5);
+        assertHashValue(token.totalEncryptedSupply(), userStartingBalance - 1e5);
     }
 
     function testTransferEncryptedInEuint() public {
-        CFT.assertHashValue(token.encBalances(user), userStartingBalance);
-        CFT.assertHashValue(token.encBalances(user2), user2StartingBalance);
-        CFT.assertHashValue(token.totalEncryptedSupply(), userStartingBalance);
+        assertHashValue(token.encBalances(user), userStartingBalance);
+        assertHashValue(token.encBalances(user2), user2StartingBalance);
+        assertHashValue(token.totalEncryptedSupply(), userStartingBalance);
 
         vm.startPrank(user);
-        InEuint128 memory amount = CFT.createInEuint128(1e5, user);
+        InEuint128 memory amount = createInEuint128(1e5, user);
         euint128 amountToSend = token.transferEncrypted(user2, amount);
         vm.stopPrank();
 
-        CFT.assertHashValue(amountToSend, 1e5);
+        assertHashValue(amountToSend, 1e5);
 
-        CFT.assertHashValue(token.encBalances(user), userStartingBalance - 1e5);
-        CFT.assertHashValue(token.encBalances(user2), user2StartingBalance + 1e5);
-        CFT.assertHashValue(token.totalEncryptedSupply(), userStartingBalance);     //total supply stay the same
+        assertHashValue(token.encBalances(user), userStartingBalance - 1e5);
+        assertHashValue(token.encBalances(user2), user2StartingBalance + 1e5);
+        assertHashValue(token.totalEncryptedSupply(), userStartingBalance);     //total supply stay the same
     }
 
     function testTransferEncryptedEuint() public {
-        CFT.assertHashValue(token.encBalances(user), userStartingBalance);
-        CFT.assertHashValue(token.encBalances(user2), user2StartingBalance);
-        CFT.assertHashValue(token.totalEncryptedSupply(), userStartingBalance);
+        assertHashValue(token.encBalances(user), userStartingBalance);
+        assertHashValue(token.encBalances(user2), user2StartingBalance);
+        assertHashValue(token.totalEncryptedSupply(), userStartingBalance);
 
         vm.startPrank(user);
         euint128 amount = FHE.asEuint128(1e5);
@@ -115,48 +112,48 @@ contract HybridFHERC20Test is Test {
         token.transferEncrypted(user2, amount);
         vm.stopPrank();
 
-        CFT.assertHashValue(token.encBalances(user), userStartingBalance - 1e5);
-        CFT.assertHashValue(token.encBalances(user2), user2StartingBalance + 1e5);
-        CFT.assertHashValue(token.totalEncryptedSupply(), userStartingBalance);
+        assertHashValue(token.encBalances(user), userStartingBalance - 1e5);
+        assertHashValue(token.encBalances(user2), user2StartingBalance + 1e5);
+        assertHashValue(token.totalEncryptedSupply(), userStartingBalance);
     }
 
     function testTransferEncryptedInsufficientBalance() public {
-        CFT.assertHashValue(token.encBalances(user), userStartingBalance);
-        CFT.assertHashValue(token.encBalances(user2), user2StartingBalance);
-        CFT.assertHashValue(token.totalEncryptedSupply(), userStartingBalance);
+        assertHashValue(token.encBalances(user), userStartingBalance);
+        assertHashValue(token.encBalances(user2), user2StartingBalance);
+        assertHashValue(token.totalEncryptedSupply(), userStartingBalance);
 
         vm.startPrank(user);
-        InEuint128 memory amount = CFT.createInEuint128(1e11, user);
+        InEuint128 memory amount = createInEuint128(1e11, user);
         euint128 amountToSend = token.transferEncrypted(user2, amount);
         vm.stopPrank();
 
-        CFT.assertHashValue(amountToSend, 0);
+        assertHashValue(amountToSend, 0);
 
         //ensure balances stay the same since 1e11 > user balance (1e10)
-        CFT.assertHashValue(token.encBalances(user), userStartingBalance);
-        CFT.assertHashValue(token.encBalances(user2), user2StartingBalance);
-        CFT.assertHashValue(token.totalEncryptedSupply(), userStartingBalance);     //total supply stay the same
+        assertHashValue(token.encBalances(user), userStartingBalance);
+        assertHashValue(token.encBalances(user2), user2StartingBalance);
+        assertHashValue(token.totalEncryptedSupply(), userStartingBalance);     //total supply stay the same
     }
 
     function testTransferFromEncryptedInEuint() public {
-        CFT.assertHashValue(token.encBalances(user), userStartingBalance);
-        CFT.assertHashValue(token.encBalances(user2), user2StartingBalance);
-        CFT.assertHashValue(token.totalEncryptedSupply(), userStartingBalance);
+        assertHashValue(token.encBalances(user), userStartingBalance);
+        assertHashValue(token.encBalances(user2), user2StartingBalance);
+        assertHashValue(token.totalEncryptedSupply(), userStartingBalance);
 
         vm.startPrank(user);
-        InEuint128 memory amount = CFT.createInEuint128(1e5, user);
+        InEuint128 memory amount = createInEuint128(1e5, user);
         token.transferFromEncrypted(user, user2, amount);
         vm.stopPrank();
 
-        CFT.assertHashValue(token.encBalances(user), userStartingBalance - 1e5);
-        CFT.assertHashValue(token.encBalances(user2), user2StartingBalance + 1e5);
-        CFT.assertHashValue(token.totalEncryptedSupply(), userStartingBalance);
+        assertHashValue(token.encBalances(user), userStartingBalance - 1e5);
+        assertHashValue(token.encBalances(user2), user2StartingBalance + 1e5);
+        assertHashValue(token.totalEncryptedSupply(), userStartingBalance);
     }
 
     function testTransferFromEncryptedEuint() public {
-        CFT.assertHashValue(token.encBalances(user), userStartingBalance);
-        CFT.assertHashValue(token.encBalances(user2), user2StartingBalance);
-        CFT.assertHashValue(token.totalEncryptedSupply(), userStartingBalance);
+        assertHashValue(token.encBalances(user), userStartingBalance);
+        assertHashValue(token.encBalances(user2), user2StartingBalance);
+        assertHashValue(token.totalEncryptedSupply(), userStartingBalance);
 
         vm.startPrank(user);
         euint128 amount = FHE.asEuint128(1e5);
@@ -165,15 +162,15 @@ contract HybridFHERC20Test is Test {
         token.transferFromEncrypted(user, user2, amount);
         vm.stopPrank();
 
-        CFT.assertHashValue(token.encBalances(user), userStartingBalance - 1e5);
-        CFT.assertHashValue(token.encBalances(user2), user2StartingBalance + 1e5);
-        CFT.assertHashValue(token.totalEncryptedSupply(), userStartingBalance);
+        assertHashValue(token.encBalances(user), userStartingBalance - 1e5);
+        assertHashValue(token.encBalances(user2), user2StartingBalance + 1e5);
+        assertHashValue(token.totalEncryptedSupply(), userStartingBalance);
     }
 
     function testTransferInvalidSender() public {
-        CFT.assertHashValue(token.encBalances(user), userStartingBalance);
-        CFT.assertHashValue(token.encBalances(user2), user2StartingBalance);
-        CFT.assertHashValue(token.totalEncryptedSupply(), userStartingBalance);
+        assertHashValue(token.encBalances(user), userStartingBalance);
+        assertHashValue(token.encBalances(user2), user2StartingBalance);
+        assertHashValue(token.totalEncryptedSupply(), userStartingBalance);
 
         euint128 amount = FHE.asEuint128(1e5);
         FHE.allow(amount, address(token)); 
@@ -184,9 +181,9 @@ contract HybridFHERC20Test is Test {
     }
 
     function testTransferInvalidReceiver() public {
-        CFT.assertHashValue(token.encBalances(user), userStartingBalance);
-        CFT.assertHashValue(token.encBalances(user2), user2StartingBalance);
-        CFT.assertHashValue(token.totalEncryptedSupply(), userStartingBalance);
+        assertHashValue(token.encBalances(user), userStartingBalance);
+        assertHashValue(token.encBalances(user2), user2StartingBalance);
+        assertHashValue(token.totalEncryptedSupply(), userStartingBalance);
 
         euint128 amount = FHE.asEuint128(1e5);
         FHE.allow(amount, address(token)); 
@@ -197,7 +194,7 @@ contract HybridFHERC20Test is Test {
     }
 
     function testDecryptBalance() public {
-        CFT.assertHashValue(token.encBalances(user), userStartingBalance);
+        assertHashValue(token.encBalances(user), userStartingBalance);
         token.decryptBalance(user);
 
         uint8 count = 0;
@@ -205,7 +202,7 @@ contract HybridFHERC20Test is Test {
         while (!success && count < 11) {
             try token.getDecryptBalanceResult(user) returns (uint128 balance) {
                 success = true;
-                CFT.assertHashValue(token.encBalances(user), balance);
+                assertHashValue(token.encBalances(user), balance);
             } catch {
                 vm.warp(block.timestamp + 1);
                 count += 1;
@@ -214,7 +211,7 @@ contract HybridFHERC20Test is Test {
     }
 
     function testDecryptBalanceSafe() public {
-        CFT.assertHashValue(token.encBalances(user), userStartingBalance);
+        assertHashValue(token.encBalances(user), userStartingBalance);
         token.decryptBalance(user);
 
         uint8 count = 0;
@@ -232,14 +229,14 @@ contract HybridFHERC20Test is Test {
     }
 
     function testWrap() public {
-        CFT.assertHashValue(token.encBalances(user), userStartingBalance);
-        CFT.assertHashValue(token.encBalances(user2), user2StartingBalance);
-        CFT.assertHashValue(token.totalEncryptedSupply(), userStartingBalance);
+        assertHashValue(token.encBalances(user), userStartingBalance);
+        assertHashValue(token.encBalances(user2), user2StartingBalance);
+        assertHashValue(token.totalEncryptedSupply(), userStartingBalance);
 
         token.wrap(user, 1e5);
 
-        CFT.assertHashValue(token.encBalances(user), userStartingBalance + 1e5);
-        CFT.assertHashValue(token.totalEncryptedSupply(), userStartingBalance + 1e5);
+        assertHashValue(token.encBalances(user), userStartingBalance + 1e5);
+        assertHashValue(token.totalEncryptedSupply(), userStartingBalance + 1e5);
 
         assertEq(token.balanceOf(user), userStartingBalance - 1e5);
         assertEq(token.totalSupply(), userStartingBalance - 1e5); //burn 1e5 public totalSupply
@@ -247,7 +244,7 @@ contract HybridFHERC20Test is Test {
 
     function testRequestUnwrapInEuint() public {
         vm.startPrank(user);
-        InEuint128 memory amount = CFT.createInEuint128(1e5, user);
+        InEuint128 memory amount = createInEuint128(1e5, user);
         euint128 handle = token.requestUnwrap(user, amount);
 
         vm.warp(block.timestamp + 11);  //ensure result is decrypted
@@ -255,8 +252,8 @@ contract HybridFHERC20Test is Test {
 
         assertEq(unwrappedAmount, 1e5);
 
-        CFT.assertHashValue(token.encBalances(user), userStartingBalance - unwrappedAmount);
-        CFT.assertHashValue(token.totalEncryptedSupply(), userStartingBalance - unwrappedAmount);
+        assertHashValue(token.encBalances(user), userStartingBalance - unwrappedAmount);
+        assertHashValue(token.totalEncryptedSupply(), userStartingBalance - unwrappedAmount);
 
         assertEq(token.balanceOf(user), userStartingBalance + unwrappedAmount);
         assertEq(token.totalSupply(), userStartingBalance + unwrappedAmount);
@@ -272,8 +269,8 @@ contract HybridFHERC20Test is Test {
 
         assertEq(unwrappedAmount, 1e5);
 
-        CFT.assertHashValue(token.encBalances(user), userStartingBalance - unwrappedAmount);
-        CFT.assertHashValue(token.totalEncryptedSupply(), userStartingBalance - unwrappedAmount);
+        assertHashValue(token.encBalances(user), userStartingBalance - unwrappedAmount);
+        assertHashValue(token.totalEncryptedSupply(), userStartingBalance - unwrappedAmount);
 
         assertEq(token.balanceOf(user), userStartingBalance + unwrappedAmount);
         assertEq(token.totalSupply(), userStartingBalance + unwrappedAmount);
@@ -290,8 +287,8 @@ contract HybridFHERC20Test is Test {
         assertTrue(decrypted);
         assertEq(unwrappedAmount, 1e5);
 
-        CFT.assertHashValue(token.encBalances(user), userStartingBalance - unwrappedAmount);
-        CFT.assertHashValue(token.totalEncryptedSupply(), userStartingBalance - unwrappedAmount);
+        assertHashValue(token.encBalances(user), userStartingBalance - unwrappedAmount);
+        assertHashValue(token.totalEncryptedSupply(), userStartingBalance - unwrappedAmount);
 
         assertEq(token.balanceOf(user), userStartingBalance + unwrappedAmount);
         assertEq(token.totalSupply(), userStartingBalance + unwrappedAmount);
