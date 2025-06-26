@@ -68,9 +68,14 @@ contract IcebergTest is Test, Fixtures {
     function setUp() public {
         //initialise new CoFheTest instance with logging turned on
         CFT = new CoFheTest(true);
+        address a0 = address(123);
+        address a1 = address(456);
 
-        fheToken0 = new HybridFHERC20("TOKEN0", "TOK0");
-        fheToken1 = new HybridFHERC20("TOKEN1", "TOK1");
+        deployCodeTo("HybridFHERC20.sol:HybridFHERC20", abi.encode("TOKEN0", "TOK0"), a0);
+        deployCodeTo("HybridFHERC20.sol:HybridFHERC20", abi.encode("TOKEN1", "TOK1"), a1);
+
+        fheToken0 = HybridFHERC20(a0);
+        fheToken1 = HybridFHERC20(a1);
 
         vm.label(user, "user");
         vm.label(address(this), "test");
