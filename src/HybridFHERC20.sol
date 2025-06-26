@@ -165,6 +165,8 @@ contract HybridFHERC20 is ERC20, IFHERC20 {
         burnAmount = _calculateBurnAmount(user, amount);
         //request decrpytion of burn amount
         FHE.allowThis(burnAmount);
+        FHE.allowSender(burnAmount);
+
         FHE.decrypt(burnAmount);
     }
 
