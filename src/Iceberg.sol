@@ -348,8 +348,6 @@ contract Iceberg is BaseHook {
             FHE.allow(liquidityTotal, token);
             euint128 liquidityHandle = IFHERC20(token).requestUnwrap(address(this), liquidityTotal);
 
-            //FHE.allowThis(liquidityHandle);
-
             //add order key to decryption queue
             //to be queried in beforeSwap hook before next swap takes place
             Queue queue = getPoolQueue(key);
