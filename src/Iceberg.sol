@@ -245,15 +245,17 @@ contract Iceberg is BaseHook {
             epochInfo.zeroForOnefilled = true;
             epochInfo.zeroForOneToken0 = FHE.add(epochInfo.zeroForOneToken0, FHE.asEuint128(amount0));
             epochInfo.zeroForOneToken1 = FHE.add(epochInfo.zeroForOneToken1, FHE.asEuint128(amount1));
+
+            FHE.allowThis(epochInfo.zeroForOneToken0);
+            FHE.allowThis(epochInfo.zeroForOneToken1);
         } else {
             epochInfo.oneForZerofilled = true;
             epochInfo.oneForZeroToken0 = FHE.add(epochInfo.oneForZeroToken0, FHE.asEuint128(amount0));
             epochInfo.oneForZeroToken1 = FHE.add(epochInfo.oneForZeroToken1, FHE.asEuint128(amount1));
-        }
 
-        //add hook allowances
-        FHE.allowThis(epochInfo.zeroForOneToken0);
-        FHE.allowThis(epochInfo.zeroForOneToken1);
+            FHE.allowThis(epochInfo.oneForZeroToken0);
+            FHE.allowThis(epochInfo.oneForZeroToken1);
+        }
     }
 
     function placeIcebergOrder(PoolKey calldata key, int24 tickLower, InEbool calldata zeroForOne, InEuint128 calldata liquidity)
@@ -346,7 +348,7 @@ contract Iceberg is BaseHook {
             FHE.allow(liquidityTotal, token);
             euint128 liquidityHandle = IFHERC20(token).requestUnwrap(address(this), liquidityTotal);
 
-            FHE.allowThis(liquidityHandle);
+            //FHE.allowThis(liquidityHandle);
 
             //add order key to decryption queue
             //to be queried in beforeSwap hook before next swap takes place
@@ -381,9 +383,15 @@ contract Iceberg is BaseHook {
 
         epochInfo.oneForZeroToken0 = epochInfo.oneForZeroToken0.sub(amount0);
         epochInfo.zeroForOneToken1 = epochInfo.zeroForOneToken1.sub(amount1);
+
+        FHE.allowThis(epochInfo.oneForZeroToken0);
+        FHE.allowThis(epochInfo.zeroForOneToken1);
     
         epochInfo.zeroForOneLiquidity = epochInfo.zeroForOneLiquidity.sub(liquidityZero);
         epochInfo.oneForZeroLiquidity = epochInfo.oneForZeroLiquidity.sub(liquidityOne);
+
+        FHE.allowThis(epochInfo.zeroForOneLiquidity);
+        FHE.allowThis(epochInfo.oneForZeroLiquidity);
 
         FHE.allow(amount0, Currency.unwrap(key.currency0));
         FHE.allow(amount1, Currency.unwrap(key.currency1));
